@@ -2903,42 +2903,53 @@ function saveSeason() {
 }
 
 function loadSeason(idx) {
+    if (!state.seasons || !state.seasons[idx]) {
+        toast('⚠️ Không tìm thấy kỳ này');
+        return;
+    }
     const season = state.seasons[idx];
-    if (!season) return;
 
-    // Kiểm tra season có đủ data để load không
-    const hasFullData = season.players.length > 0 && season.players[0].stats;
-    if (!hasFullData) {
+    // Kiểm tra season có data không
+    if (!season.players || season.players.length === 0) {
+        toast('⚠️ Kỳ này không có dữ liệu người chơi');
+        return;
+    }
+
+    // Kiểm tra có stats hay chỉ có điểm tổng
+    const firstPlayer = season.players[0];
+    if (!firstPlayer.stats) {
         toast('⚠️ Kỳ này chỉ lưu điểm tổng, không có đủ dữ liệu để load lại');
         return;
     }
 
-    if (!confirm(`Load lại dữ liệu kỳ "${season.name}" (${season.players.length} người)?\n\n⚠️ Dữ liệu hiện tại sẽ bị thay thế!`)) return;
+    try {
+        // Khôi phục players từ snapshot (KHÔNG dùng confirm để tránh bị block)
+        state.players = season.players.map((p, i) => ({
+            id: i + 1,
+            name: p.name,
+            monPhai: p.monPhai || null,
+            stats: { ...p.stats },
+            activeSlots: [...(p.activeSlots || [])],
+            result: calculateScore(p.stats, p.activeSlots || [])
+        }));
+        state.nextId = state.players.length + 1;
+        state.editingId = null;
 
-    // Khôi phục players từ snapshot
-    state.players = season.players.map((p, i) => ({
-        id: i + 1,
-        name: p.name,
-        monPhai: p.monPhai || null,
-        stats: { ...p.stats },
-        activeSlots: [...(p.activeSlots || [])],
-        result: calculateScore(p.stats, p.activeSlots || [])
-    }));
-    state.nextId = state.players.length + 1;
-    state.editingId = null;
+        clearForm();
+        recalculateAll();
+        renderSlots();
+        renderMultiplierChecks();
+        renderPlayers();
+        renderLeaderboard();
+        renderBatchAssign();
+        renderProfiles();
+        updateSummary();
+        saveState();
 
-    clearForm();
-    recalculateAll();
-    renderSlots();
-    renderMultiplierChecks();
-    renderPlayers();
-    renderLeaderboard();
-    renderBatchAssign();
-    renderProfiles();
-    updateSummary();
-    saveState();
-
-    toast(`📂 Đã load kỳ "${season.name}" — ${state.players.length} người`);
+        toast(`📂 Đã load kỳ "${season.name}" — ${state.players.length} người`);
+    } catch (err) {
+        toast('❌ Lỗi load: ' + err.message);
+    }
 }
 
 function deleteSeason(idx) {
@@ -2959,14 +2970,10 @@ function renderSeasons() {
     }
 
     container.innerHTML = state.seasons.map((s, idx) => {
-        const hasFullData = s.players.length > 0 && s.players[0].stats;
-        const loadBtn = hasFullData
-            ? `<span class="season-load" onclick="event.stopPropagation(); loadSeason(${idx})" title="Load lại dữ liệu kỳ này">📂</span>`
-            : '';
         return `
             <span class="season-tag" title="${s.players.length} người — ${new Date(s.date).toLocaleDateString('vi-VN')}">
                 📅 ${escapeHtml(s.name)} (${s.players.length})
-                ${loadBtn}
+                <span class="season-load" onclick="event.stopPropagation(); loadSeason(${idx})" title="Load lại dữ liệu kỳ này">📂</span>
                 <span class="season-delete" onclick="event.stopPropagation(); deleteSeason(${idx})" title="Xóa kỳ này">✕</span>
             </span>`;
     }).join('');
