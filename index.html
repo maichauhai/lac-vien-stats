@@ -1,0 +1,3695 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚔️ Bang Chiến Calculator — Nghịch Thủy Hàn</title>
+    <meta name="description" content="Hệ thống đánh giá chỉ số bang chiến - Nghịch Thủy Hàn">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ═══════════════════════════════════════════════
+           CSS CUSTOM PROPERTIES
+           ═══════════════════════════════════════════════ */
+        :root {
+            --bg-primary: #08080f;
+            --bg-secondary: #0e0e1a;
+            --bg-card: rgba(16, 16, 30, 0.85);
+            --bg-card-hover: rgba(22, 22, 42, 0.9);
+            --bg-input: rgba(12, 12, 24, 0.9);
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --border-glow: rgba(0, 212, 255, 0.15);
+
+            --text-primary: #e8e8f0;
+            --text-secondary: #9898b4;
+            --text-muted: #5a5a7a;
+
+            --accent-cyan: #00d4ff;
+            --accent-orange: #ff6b35;
+            --accent-purple: #a855f7;
+
+            --tier-s: #ffd700;
+            --tier-s-bg: rgba(255, 215, 0, 0.08);
+            --tier-a: #00d4ff;
+            --tier-a-bg: rgba(0, 212, 255, 0.08);
+            --tier-b: #ffd93d;
+            --tier-b-bg: rgba(255, 217, 61, 0.08);
+            --tier-c: #ff8c42;
+            --tier-c-bg: rgba(255, 140, 66, 0.08);
+            --tier-d: #ff4757;
+            --tier-d-bg: rgba(255, 71, 87, 0.08);
+
+            --font-display: 'Rajdhani', sans-serif;
+            --font-body: 'Inter', sans-serif;
+
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+
+            --shadow-glow: 0 0 20px rgba(0, 212, 255, 0.1);
+            --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
+
+            --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ═══════════════════════════════════════════════
+           RESET & BASE
+           ═══════════════════════════════════════════════ */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            font-size: 15px;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background:
+                radial-gradient(ellipse at 20% 0%, rgba(0, 212, 255, 0.04) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 100%, rgba(168, 85, 247, 0.03) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ═══════════════════════════════════════════════
+           SCROLLBAR
+           ═══════════════════════════════════════════════ */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 212, 255, 0.2);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0, 212, 255, 0.35); }
+
+        /* ═══════════════════════════════════════════════
+           LAYOUT
+           ═══════════════════════════════════════════════ */
+        .app-container {
+            position: relative;
+            z-index: 1;
+            max-width: 1340px;
+            margin: 0 auto;
+            padding: 0 24px 60px;
+        }
+
+        /* ═══════════════════════════════════════════════
+           HEADER
+           ═══════════════════════════════════════════════ */
+        .header {
+            text-align: center;
+            padding: 40px 0 32px;
+            position: relative;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+        }
+
+        .header h1 {
+            font-family: var(--font-display);
+            font-size: 2.4rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, var(--accent-cyan), #fff, var(--accent-orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 6px;
+        }
+
+        .header .subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+        }
+
+        /* ═══════════════════════════════════════════════
+           TAB NAV
+           ═══════════════════════════════════════════════ */
+        .tab-nav {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            margin: 28px 0 24px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            padding: 4px;
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .tab-btn {
+            font-family: var(--font-display);
+            font-size: 0.95rem;
+            font-weight: 600;
+            padding: 10px 24px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+            letter-spacing: 1px;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .tab-btn.active {
+            background: rgba(0, 212, 255, 0.1);
+            color: var(--accent-cyan);
+            box-shadow: 0 0 12px rgba(0, 212, 255, 0.1);
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* ═══════════════════════════════════════════════
+           CARDS
+           ═══════════════════════════════════════════════ */
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: var(--shadow-card);
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            border-color: var(--border-glow);
+        }
+
+        .card-title {
+            font-family: var(--font-display);
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 1px;
+        }
+
+        .card-title .icon {
+            font-size: 1.2rem;
+        }
+
+        /* ═══════════════════════════════════════════════
+           MAIN GRID (Input + Results)
+           ═══════════════════════════════════════════════ */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            align-items: start;
+        }
+
+        @media (max-width: 900px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ═══════════════════════════════════════════════
+           FORM ELEMENTS
+           ═══════════════════════════════════════════════ */
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="number"] {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 0.92rem;
+            transition: var(--transition);
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.08);
+        }
+
+        .form-group input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Number input arrows */
+        input[type="number"]::-webkit-inner-spin-button {
+            opacity: 0.3;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px 16px;
+        }
+
+        .stats-section-label {
+            grid-column: 1 / -1;
+            font-family: var(--font-display);
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding: 8px 0 2px;
+            border-top: 1px solid var(--border-subtle);
+            margin-top: 4px;
+        }
+
+        .stats-section-label:first-child {
+            border-top: none;
+            margin-top: 0;
+            padding-top: 0;
+        }
+
+        /* ═══════════════════════════════════════════════
+           SPECIAL MULTIPLIER CHECKBOXES
+           ═══════════════════════════════════════════════ */
+        .multiplier-checks {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .multiplier-check {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: rgba(168, 85, 247, 0.04);
+            border: 1px solid rgba(168, 85, 247, 0.1);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .multiplier-check:hover {
+            background: rgba(168, 85, 247, 0.08);
+            border-color: rgba(168, 85, 247, 0.2);
+        }
+
+        .multiplier-check input[type="checkbox"] {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--text-muted);
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+
+        .multiplier-check input[type="checkbox"]:checked {
+            background: var(--accent-purple);
+            border-color: var(--accent-purple);
+        }
+
+        .multiplier-check input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .multiplier-check .mc-name {
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            flex: 1;
+        }
+
+        .multiplier-check .mc-value {
+            font-size: 0.8rem;
+            color: var(--accent-purple);
+            font-weight: 600;
+        }
+
+        /* ═══════════════════════════════════════════════
+           BUTTONS
+           ═══════════════════════════════════════════════ */
+        .btn {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.95rem;
+            letter-spacing: 1px;
+            padding: 12px 28px;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-cyan), #0099cc);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(0, 212, 255, 0.2);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 24px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+        }
+
+        .btn-danger {
+            background: rgba(255, 71, 87, 0.1);
+            color: var(--tier-d);
+            border: 1px solid rgba(255, 71, 87, 0.15);
+        }
+
+        .btn-danger:hover {
+            background: rgba(255, 71, 87, 0.2);
+        }
+
+        .btn-sm {
+            padding: 6px 14px;
+            font-size: 0.82rem;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        /* ═══════════════════════════════════════════════
+           RESULTS PANEL
+           ═══════════════════════════════════════════════ */
+        .benchmark-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: rgba(0, 212, 255, 0.04);
+            border: 1px solid rgba(0, 212, 255, 0.1);
+            border-radius: var(--radius-md);
+            margin-bottom: 18px;
+        }
+
+        .benchmark-bar label {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .benchmark-bar select,
+        .benchmark-bar input {
+            padding: 6px 10px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        .benchmark-bar select {
+            cursor: pointer;
+        }
+
+        .benchmark-bar input {
+            width: 120px;
+        }
+
+        .benchmark-value {
+            font-family: var(--font-display);
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            margin-left: auto;
+        }
+
+        /* Player Result Cards */
+        .player-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .player-card {
+            display: grid;
+            grid-template-columns: 40px 1fr auto;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            transition: var(--transition);
+            cursor: pointer;
+            animation: slideIn 0.3s ease forwards;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(12px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .player-card:hover {
+            border-color: var(--border-glow);
+            background: var(--bg-card-hover);
+        }
+
+        .player-card.editing {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 12px rgba(0, 212, 255, 0.12);
+        }
+
+        .tier-badge {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display);
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .tier-S { background: var(--tier-s-bg); color: var(--tier-s); box-shadow: 0 0 12px rgba(255, 215, 0, 0.15); }
+        .tier-A { background: var(--tier-a-bg); color: var(--tier-a); box-shadow: 0 0 12px rgba(0, 212, 255, 0.15); }
+        .tier-B { background: var(--tier-b-bg); color: var(--tier-b); }
+        .tier-C { background: var(--tier-c-bg); color: var(--tier-c); }
+        .tier-D { background: var(--tier-d-bg); color: var(--tier-d); }
+
+        .player-info {
+            min-width: 0;
+        }
+
+        .player-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .player-breakdown {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .player-score {
+            text-align: right;
+        }
+
+        .player-score .score-value {
+            font-family: var(--font-display);
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .player-score .score-percent {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+
+        .player-actions {
+            display: none;
+            gap: 6px;
+            margin-top: 8px;
+            grid-column: 1 / -1;
+        }
+
+        .player-card.expanded .player-actions {
+            display: flex;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--text-muted);
+        }
+
+        .empty-state .icon {
+            font-size: 2.4rem;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 0.88rem;
+        }
+
+        /* ═══════════════════════════════════════════════
+           SETTINGS TAB
+           ═══════════════════════════════════════════════ */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 900px) {
+            .settings-grid { grid-template-columns: 1fr; }
+        }
+
+        .coeff-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .coeff-row:last-child { border-bottom: none; }
+
+        .coeff-label {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+        }
+
+        .coeff-input {
+            width: 90px;
+            padding: 6px 10px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            color: var(--accent-cyan);
+            font-family: var(--font-display);
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-align: center;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .coeff-input:focus {
+            border-color: var(--accent-cyan);
+        }
+
+        /* Special Multiplier Slots */
+        .slot-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .slot-row:last-child { border-bottom: none; }
+
+        .slot-name-input {
+            flex: 1;
+            padding: 8px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 0.85rem;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .slot-name-input:focus { border-color: var(--accent-purple); }
+
+        .slot-value-input {
+            width: 80px;
+            padding: 8px 10px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            color: var(--accent-purple);
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-align: center;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .slot-value-input:focus { border-color: var(--accent-purple); }
+
+        .slot-percent {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .slot-delete {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 4px;
+            transition: var(--transition);
+        }
+
+        .slot-delete:hover { color: var(--tier-d); }
+
+        /* Tier thresholds */
+        .tier-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .tier-row:last-child { border-bottom: none; }
+
+        .tier-indicator {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .tier-row .tier-desc {
+            flex: 1;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .tier-row .tier-threshold-input {
+            width: 70px;
+            padding: 6px 8px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: var(--font-display);
+            font-size: 0.9rem;
+            text-align: center;
+            outline: none;
+        }
+
+        /* ═══════════════════════════════════════════════
+           STATS SUMMARY BAR
+           ═══════════════════════════════════════════════ */
+        .summary-bar {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 600px) {
+            .summary-bar { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        .summary-item {
+            text-align: center;
+            padding: 14px 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+        }
+
+        .summary-item .s-value {
+            font-family: var(--font-display);
+            font-size: 1.6rem;
+            font-weight: 700;
+        }
+
+        .summary-item .s-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 2px;
+        }
+
+        /* ═══════════════════════════════════════════════
+           TOAST NOTIFICATIONS
+           ═══════════════════════════════════════════════ */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            padding: 12px 20px;
+            background: rgba(16, 16, 30, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glow);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            box-shadow: var(--shadow-card);
+            animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes toastOut {
+            from { opacity: 1; }
+            to { opacity: 0; transform: translateY(-8px); }
+        }
+
+        /* ═══════════════════════════════════════════════
+           UTILITY
+           ═══════════════════════════════════════════════ */
+        .mt-sm { margin-top: 8px; }
+        .mt-md { margin-top: 16px; }
+        .text-center { text-align: center; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+
+        /* ═══════════════════════════════════════════════
+           DETAIL BREAKDOWN MODAL
+           ═══════════════════════════════════════════════ */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.65);
+            z-index: 500;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-glow);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            max-width: 480px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+            animation: modalIn 0.25s ease;
+        }
+
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal h3 {
+            font-family: var(--font-display);
+            font-size: 1.2rem;
+            margin-bottom: 16px;
+            color: var(--accent-cyan);
+        }
+
+        .breakdown-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .breakdown-table td {
+            padding: 8px 4px;
+            font-size: 0.88rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .breakdown-table td:first-child { color: var(--text-secondary); }
+        .breakdown-table td:nth-child(2) { text-align: right; color: var(--text-muted); }
+        .breakdown-table td:last-child {
+            text-align: right;
+            font-family: var(--font-display);
+            font-weight: 600;
+        }
+
+        .breakdown-table tr.total td {
+            border-top: 2px solid var(--accent-cyan);
+            border-bottom: none;
+            font-weight: 700;
+            font-size: 1rem;
+            padding-top: 12px;
+            color: var(--text-primary);
+        }
+
+        .breakdown-multipliers {
+            margin-top: 12px;
+            padding: 10px 12px;
+            background: rgba(168, 85, 247, 0.06);
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(168, 85, 247, 0.1);
+        }
+
+        .breakdown-multipliers .bm-title {
+            font-size: 0.78rem;
+            color: var(--accent-purple);
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .breakdown-multipliers .bm-item {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            padding: 2px 0;
+        }
+
+        /* ═══════════════════════════════════════════════
+           LEADERBOARD TAB — THẬP ĐẠI CAO THỦ
+           ═══════════════════════════════════════════════ */
+        .lb-header {
+            text-align: center;
+            padding: 32px 0 24px;
+            position: relative;
+        }
+
+        .lb-dragon {
+            font-size: 3.5rem;
+            display: block;
+            margin-bottom: 8px;
+            filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.4));
+            animation: dragonPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes dragonPulse {
+            0%, 100% { filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.3)); transform: scale(1); }
+            50% { filter: drop-shadow(0 0 35px rgba(255, 215, 0, 0.6)); transform: scale(1.05); }
+        }
+
+        .lb-title {
+            font-family: var(--font-display);
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            background: linear-gradient(135deg, #ffd700, #ffaa00, #ffd700, #fff5cc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            background-size: 200% 100%;
+            animation: goldShimmer 4s linear infinite;
+        }
+
+        @keyframes goldShimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .lb-subtitle {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            letter-spacing: 2px;
+        }
+
+        .lb-divider {
+            width: 300px;
+            height: 2px;
+            margin: 16px auto 0;
+            background: linear-gradient(90deg, transparent, #ffd700, transparent);
+            border: none;
+        }
+
+        /* Top 10 Grid */
+        .lb-top10 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+
+        @media (max-width: 700px) {
+            .lb-top10 { grid-template-columns: 1fr; }
+        }
+
+        /* Top 10 player card */
+        .lb-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px 20px;
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 215, 0, 0.08);
+            border-radius: var(--radius-md);
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .lb-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.3), transparent);
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .lb-card:hover {
+            border-color: rgba(255, 215, 0, 0.2);
+            background: var(--bg-card-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .lb-card:hover::before { opacity: 1; }
+
+        /* Top 3 special styles */
+        .lb-card.rank-1 {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 140, 0, 0.04), rgba(16, 16, 30, 0.95));
+            border-color: rgba(255, 215, 0, 0.35);
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.15), inset 0 1px 0 rgba(255,215,0,0.2);
+            padding: 22px 28px;
+            animation: rank1Glow 3s ease-in-out infinite;
+        }
+
+        @keyframes rank1Glow {
+            0%, 100% { box-shadow: 0 0 30px rgba(255,215,0,0.12), inset 0 1px 0 rgba(255,215,0,0.15); }
+            50% { box-shadow: 0 0 55px rgba(255,215,0,0.25), 0 0 80px rgba(255,160,0,0.08), inset 0 1px 0 rgba(255,215,0,0.25); }
+        }
+
+        .lb-card.rank-1::before {
+            opacity: 1;
+            background: linear-gradient(90deg, transparent, #ffd700, #ffaa00, #ffd700, transparent);
+            height: 2px;
+            animation: shimmerLine 3s linear infinite;
+            background-size: 200% 100%;
+        }
+
+        @keyframes shimmerLine {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .lb-card.rank-1::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,215,0,0.3), transparent);
+        }
+
+        .lb-card.rank-2 {
+            background: linear-gradient(135deg, rgba(192, 192, 192, 0.08), rgba(150,180,220,0.03), rgba(16, 16, 30, 0.95));
+            border-color: rgba(192, 192, 192, 0.25);
+            box-shadow: 0 0 20px rgba(192,192,192,0.06);
+        }
+
+        .lb-card.rank-2::before {
+            opacity: 1;
+            background: linear-gradient(90deg, transparent, #c0c0c0, transparent);
+        }
+
+        .lb-card.rank-3 {
+            background: linear-gradient(135deg, rgba(205, 127, 50, 0.08), rgba(180,100,30,0.03), rgba(16, 16, 30, 0.95));
+            border-color: rgba(205, 127, 50, 0.25);
+            box-shadow: 0 0 20px rgba(205,127,50,0.06);
+        }
+
+        .lb-card.rank-3::before {
+            opacity: 1;
+            background: linear-gradient(90deg, transparent, #cd7f32, transparent);
+        }
+
+        /* ═══ FACTION BADGES ═══ */
+        .faction-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            flex-shrink: 0;
+            border: 1px solid;
+        }
+
+        .faction-badge svg {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .lb-card.rank-1 .faction-badge svg { width: 16px; height: 16px; }
+
+        .faction-badge.f-huyetha    { background: rgba(200,30,30,0.15);  border-color: rgba(200,30,30,0.4);   color: #ff6b6b; }
+        .faction-badge.f-toaimong   { background: rgba(0,200,180,0.12);  border-color: rgba(0,200,180,0.35);  color: #00d4b8; }
+        .faction-badge.f-thanthuong { background: rgba(50,100,230,0.15); border-color: rgba(80,130,255,0.35); color: #7aa8ff; }
+        .faction-badge.f-cuulinh    { background: rgba(150,50,220,0.15); border-color: rgba(180,80,255,0.35); color: #c084fc; }
+        .faction-badge.f-longngam   { background: rgba(20,180,80,0.15);  border-color: rgba(40,210,100,0.35); color: #4ade80; }
+        .faction-badge.f-thiiety    { background: rgba(200,160,20,0.15); border-color: rgba(230,190,50,0.35); color: #fbbf24; }
+        .faction-badge.f-tovan      { background: rgba(200,200,200,0.1); border-color: rgba(220,220,220,0.3); color: #e5e5e5; }
+
+        .lb-card.rank-1 .faction-badge { font-size: 0.75rem; padding: 3px 10px; }
+
+        .lb-rank {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display);
+            font-weight: 700;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .lb-rank .rank-num {
+            font-size: 1.3rem;
+            line-height: 1;
+        }
+
+        .lb-rank .rank-medal {
+            font-size: 0.7rem;
+            line-height: 1;
+            margin-top: 1px;
+        }
+
+        .lb-rank.r1 { background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,170,0,0.1)); color: #ffd700; box-shadow: 0 0 16px rgba(255,215,0,0.2); }
+        .lb-rank.r2 { background: linear-gradient(135deg, rgba(192,192,192,0.15), rgba(150,150,150,0.08)); color: #c0c0c0; }
+        .lb-rank.r3 { background: linear-gradient(135deg, rgba(205,127,50,0.15), rgba(180,100,30,0.08)); color: #cd7f32; }
+        .lb-rank.r-normal { background: rgba(255,255,255,0.04); color: var(--text-muted); }
+
+        .lb-name {
+            font-weight: 600;
+            font-size: 1rem;
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            overflow: hidden;
+        }
+        .lb-name .lb-player-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .lb-name .lb-roles {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        .lb-roles-tag {
+            font-size: 0.62rem;
+            font-weight: 500;
+            padding: 1px 6px;
+            border-radius: 8px;
+            background: rgba(168, 85, 247, 0.12);
+            color: var(--accent-purple);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            white-space: nowrap;
+        }
+
+        .lb-card.rank-1 .lb-name { font-size: 1.15rem; color: #ffd700; }
+        .lb-card.rank-2 .lb-name { color: #d4d4d4; }
+        .lb-card.rank-3 .lb-name { color: #daa06d; }
+
+        .lb-score {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .lb-card.rank-1 .lb-score { font-size: 1.5rem; color: #ffd700; }
+        .lb-card.rank-2 .lb-score { color: #c0c0c0; }
+        .lb-card.rank-3 .lb-score { color: #cd7f32; }
+
+        .lb-pct {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-left: 4px;
+        }
+
+        /* Rest of ranking */
+        .lb-rest-title {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+            margin-bottom: 14px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .lb-rest {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        @media (max-width: 700px) {
+            .lb-rest { grid-template-columns: 1fr; }
+        }
+
+        .lb-rest-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+        }
+
+        .lb-rest-row:hover {
+            background: rgba(255,255,255,0.04);
+        }
+
+        .lb-rest-rank {
+            font-family: var(--font-display);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            width: 28px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .lb-rest-name {
+            font-size: 0.88rem;
+            flex: 1;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .lb-rest-score {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        .lb-rest-tier {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        /* ═══════════════════════════════════════════════
+           BATCH ASSIGN + PROFILES
+           ═══════════════════════════════════════════════ */
+        .mgmt-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 24px;
+            margin-top: 32px;
+        }
+
+        @media (max-width: 900px) {
+            .mgmt-grid { grid-template-columns: 1fr; }
+        }
+
+        .ba-player-list {
+            max-height: 340px;
+            overflow-y: auto;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            margin-bottom: 12px;
+        }
+
+        .ba-player-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-subtle);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .ba-player-row:last-child { border-bottom: none; }
+        .ba-player-row:hover { background: rgba(255,255,255,0.03); }
+        .ba-player-row.selected { background: rgba(0, 212, 255, 0.06); }
+
+        .ba-player-row input[type="checkbox"] {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--text-muted);
+            border-radius: 3px;
+            cursor: pointer;
+            position: relative;
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+
+        .ba-player-row input[type="checkbox"]:checked {
+            background: var(--accent-cyan);
+            border-color: var(--accent-cyan);
+        }
+
+        .ba-player-row input[type="checkbox"]:checked::after {
+            content: '\2713';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .ba-player-name {
+            font-size: 0.85rem;
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .ba-player-roles {
+            font-size: 0.72rem;
+            color: var(--accent-purple);
+            flex-shrink: 0;
+        }
+
+        .ba-roles-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .ba-role-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            background: rgba(168, 85, 247, 0.04);
+            border: 1px solid rgba(168, 85, 247, 0.1);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.82rem;
+        }
+
+        .ba-role-chip:hover {
+            background: rgba(168, 85, 247, 0.08);
+        }
+
+        .ba-role-chip input[type="checkbox"] {
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--text-muted);
+            border-radius: 3px;
+            cursor: pointer;
+            position: relative;
+            transition: var(--transition);
+        }
+
+        .ba-role-chip input[type="checkbox"]:checked {
+            background: var(--accent-purple);
+            border-color: var(--accent-purple);
+        }
+
+        .ba-role-chip input[type="checkbox"]:checked::after {
+            content: '\2713';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 9px;
+            font-weight: 700;
+        }
+
+        .ba-role-name { flex: 1; color: var(--text-primary); }
+        .ba-role-value { color: var(--accent-purple); font-weight: 600; font-size: 0.78rem; }
+
+        .ba-select-bar {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .ba-select-bar span {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-left: auto;
+        }
+
+        .ba-link {
+            font-size: 0.78rem;
+            color: var(--accent-cyan);
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 2px 6px;
+            transition: var(--transition);
+        }
+
+        .ba-link:hover { text-decoration: underline; }
+
+        /* Profiles */
+        .profile-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            margin-bottom: 6px;
+            transition: var(--transition);
+        }
+
+        .profile-item:hover { background: rgba(255,255,255,0.04); }
+
+        .profile-name {
+            flex: 1;
+            font-size: 0.88rem;
+            font-weight: 500;
+        }
+
+        .profile-count {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .profile-save-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .profile-save-row input {
+            flex: 1;
+            padding: 8px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        .profile-save-row input:focus { border-color: var(--accent-cyan); }
+
+        /* ═══════════════════════════════════════════════
+           SEARCH & FILTER BAR
+           ═══════════════════════════════════════════════ */
+        .search-filter-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px 14px 10px 36px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 0.88rem;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .search-input:focus { border-color: var(--accent-cyan); box-shadow: 0 0 0 3px rgba(0,212,255,0.08); }
+
+        .search-wrapper {
+            position: relative;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .search-wrapper::before {
+            content: '🔍';
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.85rem;
+            pointer-events: none;
+        }
+
+        .filter-select {
+            padding: 10px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            outline: none;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .filter-select:focus { border-color: var(--accent-cyan); }
+
+        /* ═══════════════════════════════════════════════
+           FACTION STATS PANEL
+           ═══════════════════════════════════════════════ */
+        .faction-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .faction-stat-card {
+            padding: 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .faction-stat-card:hover { border-color: var(--border-glow); }
+
+        .faction-stat-card .fs-icon { display: flex; align-items: center; justify-content: center; gap: 4px; margin-bottom: 6px; }
+        .faction-stat-card .fs-icon svg { width: 18px; height: 18px; }
+        .faction-stat-card .fs-label { font-size: 0.78rem; font-weight: 600; margin-bottom: 4px; }
+        .faction-stat-card .fs-count { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; }
+        .faction-stat-card .fs-avg { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+
+        /* ═══════════════════════════════════════════════
+           SEASON HISTORY
+           ═══════════════════════════════════════════════ */
+        .season-bar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+            padding: 12px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+        }
+
+        .season-bar label {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .season-bar input {
+            padding: 6px 10px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 0.85rem;
+            outline: none;
+            width: 120px;
+        }
+
+        .season-bar input:focus { border-color: var(--accent-cyan); }
+
+        .season-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            background: rgba(0,212,255,0.08);
+            border: 1px solid rgba(0,212,255,0.15);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: var(--accent-cyan);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .season-tag:hover { background: rgba(0,212,255,0.15); }
+        .season-tag.active { background: rgba(0,212,255,0.2); border-color: var(--accent-cyan); font-weight: 600; }
+
+        .season-tag .season-delete {
+            font-size: 0.65rem;
+            opacity: 0.5;
+            cursor: pointer;
+            margin-left: 2px;
+        }
+
+        .season-tag .season-delete:hover { opacity: 1; color: var(--tier-d); }
+
+        .season-tag .season-load {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            cursor: pointer;
+            margin-left: 2px;
+            transition: var(--transition);
+        }
+
+        .season-tag .season-load:hover { opacity: 1; color: #4ade80; }
+
+        .trend-up { color: #4ade80; }
+        .trend-down { color: #ff6b6b; }
+        .trend-neutral { color: var(--text-muted); }
+
+        /* ═══════════════════════════════════════════════
+           DATA ANOMALY WARNINGS
+           ═══════════════════════════════════════════════ */
+        .anomaly-panel {
+            margin-top: 16px;
+            padding: 14px 16px;
+            background: rgba(255,140,0,0.06);
+            border: 1px solid rgba(255,140,0,0.15);
+            border-radius: var(--radius-md);
+        }
+
+        .anomaly-panel .ap-title {
+            font-family: var(--font-display);
+            font-size: 0.9rem;
+            color: #ffaa33;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .anomaly-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .anomaly-item:last-child { border-bottom: none; }
+        .anomaly-item .ai-icon { flex-shrink: 0; }
+        .anomaly-item .ai-name { font-weight: 600; color: var(--text-primary); }
+
+        /* ═══════════════════════════════════════════════
+           BACKUP / RESTORE
+           ═══════════════════════════════════════════════ */
+        .backup-section {
+            margin-top: 20px;
+            padding: 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+        }
+
+        .backup-section .bs-title {
+            font-family: var(--font-display);
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            margin-bottom: 10px;
+        }
+
+        /* ═══════════════════════════════════════════════
+           SORTABLE HEADERS
+           ═══════════════════════════════════════════════ */
+        .sort-bar {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .sort-btn {
+            padding: 4px 10px;
+            font-size: 0.72rem;
+            font-family: var(--font-body);
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .sort-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.06); }
+        .sort-btn.active { color: var(--accent-cyan); border-color: rgba(0,212,255,0.3); background: rgba(0,212,255,0.08); }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+
+    <!-- ═══════════════ HEADER ═══════════════ -->
+    <header class="header">
+        <h1>⚔️ BANG CHIẾN CALCULATOR</h1>
+        <div class="subtitle">Nghịch Thủy Hàn — Hệ thống đánh giá chỉ số</div>
+    </header>
+
+    <!-- ═══════════════ TAB NAVIGATION ═══════════════ -->
+    <nav class="tab-nav" id="tabNav">
+        <button class="tab-btn active" data-tab="calculator">📊 TÍNH ĐIỂM</button>
+        <button class="tab-btn" data-tab="leaderboard">🐉 XẾP HẠNG</button>
+        <button class="tab-btn" data-tab="settings">⚙️ CÀI ĐẶT</button>
+    </nav>
+
+    <!-- ═══════════════ CALCULATOR TAB ═══════════════ -->
+    <div class="tab-content active" id="tab-calculator">
+
+        <!-- Summary Bar -->
+        <div class="summary-bar" id="summaryBar">
+            <div class="summary-item">
+                <div class="s-value" id="sumTotal">0</div>
+                <div class="s-label">Thành viên</div>
+            </div>
+            <div class="summary-item">
+                <div class="s-value" style="color:var(--tier-s)" id="sumS">0</div>
+                <div class="s-label">Hạng S</div>
+            </div>
+            <div class="summary-item">
+                <div class="s-value" style="color:var(--tier-a)" id="sumA">0</div>
+                <div class="s-label">Hạng A</div>
+            </div>
+            <div class="summary-item">
+                <div class="s-value" style="color:var(--tier-b)" id="sumB">0</div>
+                <div class="s-label">Hạng B</div>
+            </div>
+            <div class="summary-item">
+                <div class="s-value" style="color:var(--tier-d)" id="sumCD">0</div>
+                <div class="s-label">C + D</div>
+            </div>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="main-grid">
+
+            <!-- LEFT: Input Panel -->
+            <div class="card" id="inputPanel">
+                <div class="card-title">
+                    <span class="icon">🎮</span>
+                    <span id="inputTitle">NHẬP CHỈ SỐ THÀNH VIÊN</span>
+                </div>
+
+                <div class="form-group">
+                    <label>Tên thành viên</label>
+                    <input type="text" id="playerName" placeholder="Nhập tên ingame..." autocomplete="off">
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stats-section-label">📌 Chỉ số chính</div>
+
+                    <div class="form-group">
+                        <label>Sát thương người</label>
+                        <input type="number" id="statStNguoi" placeholder="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Sát thương trụ</label>
+                        <input type="number" id="statStTru" placeholder="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Trị liệu</label>
+                        <input type="number" id="statTriLieu" placeholder="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Đỡ đòn</label>
+                        <input type="number" id="statDoDon" placeholder="0" min="0">
+                    </div>
+
+                    <div class="stats-section-label">📎 Chỉ số phụ</div>
+
+                    <div class="form-group">
+                        <label>Hỗ trợ</label>
+                        <input type="number" id="statHoTro" placeholder="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Vật tư</label>
+                        <input type="number" id="statVatTu" placeholder="0" min="0">
+                    </div>
+
+                    <div class="stats-section-label">⚔️ KDA</div>
+
+                    <div class="form-group">
+                        <label>Giết người</label>
+                        <input type="number" id="statGiet" placeholder="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Hồi sinh</label>
+                        <input type="number" id="statHoiSinh" placeholder="0" min="0">
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Số lần chết</label>
+                        <input type="number" id="statChet" placeholder="0" min="0" style="max-width:calc(50% - 8px);">
+                    </div>
+                </div>
+
+                <!-- Special Multipliers -->
+                <div class="stats-section-label" style="margin-top:14px; border-top:1px solid var(--border-subtle); padding-top:12px;">
+                    ✨ Hệ số đặc biệt
+                </div>
+                <div class="multiplier-checks" id="multiplierChecks">
+                    <!-- Generated by JS -->
+                </div>
+
+                <!-- Buttons -->
+                <div class="btn-group">
+                    <button class="btn btn-primary" id="btnAdd" onclick="addOrUpdatePlayer()">
+                        ➕ THÊM
+                    </button>
+                    <button class="btn btn-secondary" id="btnClear" onclick="clearForm()">
+                        🗑️ XÓA FORM
+                    </button>
+                </div>
+            </div>
+
+            <!-- RIGHT: Results Panel -->
+            <div>
+                <!-- Benchmark -->
+                <div class="card" style="margin-bottom:16px;">
+                    <div class="card-title">
+                        <span class="icon">📏</span>
+                        MỐC CHUẨN
+                    </div>
+                    <div class="benchmark-bar">
+                        <label>Chế độ:</label>
+                        <select id="benchmarkMode" onchange="updateBenchmark()">
+                            <option value="auto">Tự động (TB)</option>
+                            <option value="manual">Thủ công</option>
+                        </select>
+                        <input type="number" id="benchmarkManual" placeholder="Nhập mốc..." style="display:none;" onchange="updateBenchmark()">
+                        <div class="benchmark-value" id="benchmarkDisplay">0</div>
+                    </div>
+                </div>
+
+                <!-- Player List -->
+                <div class="card">
+                    <div class="flex-between" style="margin-bottom:16px;">
+                        <div class="card-title" style="margin-bottom:0;">
+                            <span class="icon">🏆</span>
+                            BẢNG XẾP HẠNG
+                        </div>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                            <button class="btn btn-secondary btn-sm" onclick="exportResults()">📋 Copy</button>
+                            <button class="btn btn-secondary btn-sm" onclick="openImportModal()">📥 Import</button>
+                            <button class="btn btn-secondary btn-sm" onclick="exportJSON()">💾 JSON</button>
+                            <button class="btn btn-danger btn-sm" onclick="clearAllPlayers()">🗑️ Xóa hết</button>
+                        </div>
+                    </div>
+                    <div class="player-list" id="playerList">
+                        <div class="empty-state">
+                            <div class="icon">⚔️</div>
+                            <p>Chưa có thành viên nào.<br>Nhập chỉ số bên trái để bắt đầu.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ LEADERBOARD TAB ═══════════════ -->
+    <div class="tab-content" id="tab-leaderboard">
+        <div class="lb-header">
+            <span class="lb-dragon">🐉</span>
+            <div class="lb-title">THẬP ĐẠI CAO THỦ</div>
+            <div class="lb-subtitle">NGHỊCH THỦY HÀN — BẢNG PHONG THẦN</div>
+            <hr class="lb-divider">
+        </div>
+
+        <div id="leaderboardTop10" class="lb-top10">
+            <!-- Generated by JS -->
+        </div>
+
+        <!-- Search & Filter -->
+        <div class="search-filter-bar" style="margin-top:20px;">
+            <div class="search-wrapper">
+                <input type="text" class="search-input" id="lbSearch" placeholder="Tìm theo tên..." oninput="renderLeaderboard()">
+            </div>
+            <select class="filter-select" id="lbFilterFaction" onchange="renderLeaderboard()">
+                <option value="">Tất cả môn phái</option>
+                <option value="Huyết Hà">Huyết Hà</option>
+                <option value="Thần Tương">Thần Tương</option>
+                <option value="Cửu Linh">Cửu Linh</option>
+                <option value="Long Ngâm">Long Ngâm</option>
+                <option value="Tố Vấn">Tố Vấn</option>
+                <option value="Toái Mộng">Toái Mộng</option>
+                <option value="Thiết Y">Thiết Y</option>
+            </select>
+            <select class="filter-select" id="lbFilterTier" onchange="renderLeaderboard()">
+                <option value="">Tất cả hạng</option>
+                <option value="S">Hạng S</option>
+                <option value="A">Hạng A</option>
+                <option value="B">Hạng B</option>
+                <option value="C">Hạng C</option>
+                <option value="D">Hạng D</option>
+            </select>
+        </div>
+
+        <!-- Sort Bar -->
+        <div class="sort-bar" id="lbSortBar">
+            <button class="sort-btn active" data-sort="finalScore" onclick="changeLbSort('finalScore')">Tổng điểm</button>
+            <button class="sort-btn" data-sort="stNguoi" onclick="changeLbSort('stNguoi')">ST Người</button>
+            <button class="sort-btn" data-sort="stTru" onclick="changeLbSort('stTru')">ST Trụ</button>
+            <button class="sort-btn" data-sort="triLieu" onclick="changeLbSort('triLieu')">Trị liệu</button>
+            <button class="sort-btn" data-sort="doDon" onclick="changeLbSort('doDon')">Đỡ đòn</button>
+            <button class="sort-btn" data-sort="hoTro" onclick="changeLbSort('hoTro')">Hỗ trợ</button>
+            <button class="sort-btn" data-sort="giet" onclick="changeLbSort('giet')">Giết</button>
+        </div>
+
+        <div id="leaderboardRest">
+            <!-- Generated by JS -->
+        </div>
+
+        <!-- Faction Stats -->
+        <div class="card" style="margin-top:24px;">
+            <div class="card-title">
+                <span class="icon">📊</span>
+                THỐNG KÊ MÔN PHÁI
+            </div>
+            <div class="faction-stats-grid" id="factionStatsGrid">
+                <!-- Generated by JS -->
+            </div>
+        </div>
+
+        <!-- Anomaly Warnings -->
+        <div id="anomalyPanel" style="display:none;">
+            <!-- Generated by JS -->
+        </div>
+
+        <!-- Management Section -->
+        <div class="mgmt-grid" id="mgmtSection">
+            <!-- Batch Assign -->
+            <div class="card">
+                <div class="card-title">
+                    <span class="icon">⚡</span>
+                    GÁN VAI TRÒ HÀNG LOẠT
+                </div>
+                <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:12px;">
+                    Chọn người chơi → chọn vai trò → bấm Gán.
+                </p>
+
+                <div class="ba-select-bar">
+                    <button class="ba-link" onclick="baSelectAll()">Chọn tất cả</button>
+                    <button class="ba-link" onclick="baSelectNone()">Bỏ chọn</button>
+                    <span id="baSelectedCount">0 đã chọn</span>
+                </div>
+
+                <div class="ba-player-list" id="baPlayerList">
+                    <!-- Generated by JS -->
+                </div>
+
+                <div class="ba-roles-grid" id="baRolesGrid">
+                    <!-- Generated by JS -->
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-primary btn-sm" onclick="batchAssignRoles()">⚡ Gán vai trò</button>
+                    <button class="btn btn-danger btn-sm" onclick="batchClearRoles()">🗑️ Xóa vai trò</button>
+                </div>
+            </div>
+
+            <!-- Team Profiles -->
+            <div class="card">
+                <div class="card-title">
+                    <span class="icon">📋</span>
+                    ĐỘI HÌNH
+                </div>
+                <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:12px;">
+                    Lưu đội hình (ai giữ vai trò gì) để load nhanh cho trận sau.
+                </p>
+
+                <div class="profile-save-row">
+                    <input type="text" id="profileNameInput" placeholder="Tên đội hình...">
+                    <button class="btn btn-primary btn-sm" onclick="saveProfile()">💾 Lưu</button>
+                </div>
+
+                <div id="profileList">
+                    <!-- Generated by JS -->
+                </div>
+
+                <div style="margin-top:12px;">
+                    <p style="font-size:0.72rem;color:var(--text-muted);">
+                        💡 Lưu vai trò hiện tại của tất cả thành viên. Khi load, tự động gán lại vai trò cho những người trùng tên.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ SETTINGS TAB ═══════════════ -->
+    <div class="tab-content" id="tab-settings">
+        <div class="settings-grid">
+
+            <!-- Coefficients -->
+            <div class="card">
+                <div class="card-title">
+                    <span class="icon">⚡</span>
+                    HỆ SỐ QUY ĐỔI
+                </div>
+                <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:14px;">
+                    Điều chỉnh hệ số nhân cho từng chỉ số. Tất cả quy đổi về đơn vị "sát thương người".
+                </p>
+
+                <div class="coeff-row">
+                    <span class="coeff-label">Sát thương người</span>
+                    <input type="number" class="coeff-input" id="coeffStNguoi" value="1" step="0.01" onchange="saveSettings()">
+                </div>
+                <div class="coeff-row">
+                    <span class="coeff-label">Sát thương trụ</span>
+                    <input type="number" class="coeff-input" id="coeffStTru" value="0.4" step="0.01" onchange="saveSettings()">
+                </div>
+                <div class="coeff-row">
+                    <span class="coeff-label">Trị liệu</span>
+                    <input type="number" class="coeff-input" id="coeffTriLieu" value="0.6667" step="0.0001" onchange="saveSettings()">
+                </div>
+                <div class="coeff-row">
+                    <span class="coeff-label">Đỡ đòn</span>
+                    <input type="number" class="coeff-input" id="coeffDoDon" value="0.7619" step="0.0001" onchange="saveSettings()">
+                </div>
+                <div class="coeff-row">
+                    <span class="coeff-label">Hỗ trợ</span>
+                    <input type="number" class="coeff-input" id="coeffHoTro" value="1" step="0.01" onchange="saveSettings()">
+                </div>
+                <div class="coeff-row">
+                    <span class="coeff-label">Vật tư</span>
+                    <input type="number" class="coeff-input" id="coeffVatTu" value="0.3333" step="0.0001" onchange="saveSettings()">
+                </div>
+                <div class="coeff-row">
+                    <span class="coeff-label">KDA (nhân mỗi điểm)</span>
+                    <input type="number" class="coeff-input" id="coeffKda" value="4" step="1" onchange="saveSettings()">
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-secondary btn-sm" onclick="resetCoefficients()">↩️ Reset mặc định</button>
+                </div>
+            </div>
+
+            <!-- Right column settings -->
+            <div>
+                <!-- Special Multiplier Slots -->
+                <div class="card" style="margin-bottom:16px;">
+                    <div class="card-title">
+                        <span class="icon">✨</span>
+                        HỆ SỐ ĐẶC BIỆT
+                    </div>
+                    <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:14px;">
+                        Tạo các slot hệ số đặc biệt. Ghi tên vai trò và % cộng thêm vào tổng điểm.
+                    </p>
+
+                    <div id="slotContainer">
+                        <!-- Generated by JS -->
+                    </div>
+
+                    <div class="mt-md">
+                        <button class="btn btn-secondary btn-sm" onclick="addSlot()">➕ Thêm slot</button>
+                    </div>
+                </div>
+
+                <!-- Tier Thresholds -->
+                <div class="card">
+                    <div class="card-title">
+                        <span class="icon">🎖️</span>
+                        NGƯỠNG XẾP HẠNG
+                    </div>
+                    <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:14px;">
+                        % so với mốc chuẩn để đạt từng hạng.
+                    </p>
+
+                    <div class="tier-row">
+                        <div class="tier-indicator tier-S">S</div>
+                        <span class="tier-desc">Nòng cốt</span>
+                        <span>≥</span>
+                        <input type="number" class="tier-threshold-input" id="threshS" value="120" onchange="saveSettings()">
+                        <span style="color:var(--text-muted)">%</span>
+                    </div>
+                    <div class="tier-row">
+                        <div class="tier-indicator tier-A">A</div>
+                        <span class="tier-desc">Ổn định</span>
+                        <span>≥</span>
+                        <input type="number" class="tier-threshold-input" id="threshA" value="100" onchange="saveSettings()">
+                        <span style="color:var(--text-muted)">%</span>
+                    </div>
+                    <div class="tier-row">
+                        <div class="tier-indicator tier-B">B</div>
+                        <span class="tier-desc">Cần cải thiện</span>
+                        <span>≥</span>
+                        <input type="number" class="tier-threshold-input" id="threshB" value="80" onchange="saveSettings()">
+                        <span style="color:var(--text-muted)">%</span>
+                    </div>
+                    <div class="tier-row">
+                        <div class="tier-indicator tier-C">C</div>
+                        <span class="tier-desc">Nguy hiểm</span>
+                        <span>≥</span>
+                        <input type="number" class="tier-threshold-input" id="threshC" value="60" onchange="saveSettings()">
+                        <span style="color:var(--text-muted)">%</span>
+                    </div>
+                    <div class="tier-row">
+                        <div class="tier-indicator tier-D">D</div>
+                        <span class="tier-desc">Đào thải</span>
+                        <span style="color:var(--text-muted);font-size:0.8rem;">dưới ngưỡng C</span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Season History -->
+        <div class="season-bar" style="margin-top:24px;">
+            <label>📅 Lịch sử kỳ:</label>
+            <input type="text" id="seasonNameInput" placeholder="VD: Kỳ 114">
+            <button class="btn btn-primary btn-sm" onclick="saveSeason()">💾 Lưu kỳ hiện tại</button>
+            <div id="seasonTags" style="display:flex;gap:6px;flex-wrap:wrap;margin-left:8px;">
+                <!-- Generated by JS -->
+            </div>
+        </div>
+
+        <!-- Backup / Restore -->
+        <div class="backup-section">
+            <div class="bs-title">💾 Backup & Khôi phục</div>
+            <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:12px;">
+                Tải xuống bản backup toàn bộ dữ liệu (players, settings, profiles, seasons). Dùng để khôi phục khi xóa cache.
+            </p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn btn-primary btn-sm" onclick="downloadBackup()">📥 Tải backup xuống</button>
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('restoreInput').click()">📂 Khôi phục từ file</button>
+                <input type="file" id="restoreInput" accept=".json" style="display:none;" onchange="restoreBackup(event)">
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detailModal" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+        <h3 id="modalTitle">Chi tiết</h3>
+        <div id="modalBody"></div>
+        <div class="btn-group" style="justify-content:flex-end;">
+            <button class="btn btn-secondary btn-sm" onclick="closeModal()">Đóng</button>
+        </div>
+    </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal-overlay" id="importModal" onclick="if(event.target===this)closeImportModal()">
+    <div class="modal" style="max-width:600px;">
+        <h3>📥 Import dữ liệu</h3>
+        <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:12px;">
+            Paste JSON data vào đây. Hỗ trợ 2 chế độ:
+            <br>• <b>Thêm mới</b>: Thêm player chưa có, cập nhật chỉ số mới cho player đã có
+            <br>• <b>Ghi đè</b>: Xóa hết rồi import lại
+        </p>
+        <textarea id="importTextarea" style="width:100%;height:240px;padding:12px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text-primary);font-family:monospace;font-size:0.82rem;resize:vertical;outline:none;" placeholder='Paste JSON array here...'></textarea>
+        <div class="btn-group" style="justify-content:flex-end;margin-top:12px;">
+            <button class="btn btn-secondary btn-sm" onclick="closeImportModal()">Hủy</button>
+            <button class="btn btn-secondary btn-sm" onclick="doImport('merge')">🔄 Merge (thêm/cập nhật)</button>
+            <button class="btn btn-primary btn-sm" onclick="doImport('replace')">📥 Ghi đè</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+
+const DEFAULT_COEFFICIENTS = {
+    stNguoi: 1,
+    stTru: 0.4,
+    triLieu: 0.6667,
+    doDon: 0.7619,
+    hoTro: 1,
+    vatTu: 0.3333,
+    kda: 4
+};
+
+const DEFAULT_SLOTS = [
+    { name: 'Chỉ huy trận', value: 20 },
+    { name: 'Tanker / Trường ca', value: 15 },
+    { name: 'Khống chế / Buff đồng đội', value: 15 },
+    { name: 'Trinh sát / Def nhà', value: 20 },
+    { name: 'Dự bị được gọi vào', value: 15 },
+    { name: 'Liên tục 3+ trận', value: 5 }
+];
+
+const DEFAULT_THRESHOLDS = { s: 120, a: 100, b: 80, c: 60 };
+
+let state = {
+    players: [],
+    coefficients: { ...DEFAULT_COEFFICIENTS },
+    slots: JSON.parse(JSON.stringify(DEFAULT_SLOTS)),
+    thresholds: { ...DEFAULT_THRESHOLDS },
+    benchmarkMode: 'auto',
+    benchmarkManual: 0,
+    editingId: null,
+    nextId: 1,
+    profiles: [],
+    seasons: []
+};
+
+let lbSortKey = 'finalScore';
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+
+function init() {
+    loadState();
+    renderSlots();
+    renderMultiplierChecks();
+    renderPlayers();
+    renderLeaderboard();
+    renderBatchAssign();
+    renderProfiles();
+    renderSeasons();
+    renderFactionStats();
+    renderAnomalies();
+    updateSummary();
+    applySettingsToUI();
+    setupTabs();
+    setupEnterKey();
+}
+
+function setupTabs() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+        });
+    });
+}
+
+function setupEnterKey() {
+    document.getElementById('inputPanel').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addOrUpdatePlayer();
+        }
+    });
+}
+
+// ═══════════════════════════════════════════════
+// SCORE CALCULATION
+// ═══════════════════════════════════════════════
+
+function calculateScore(stats, activeSlotIndices) {
+    const c = state.coefficients;
+
+    const baseScore =
+        (stats.stNguoi || 0) * c.stNguoi +
+        (stats.stTru || 0) * c.stTru +
+        (stats.triLieu || 0) * c.triLieu +
+        (stats.doDon || 0) * c.doDon +
+        (stats.hoTro || 0) * c.hoTro +
+        (stats.vatTu || 0) * c.vatTu +
+        ((stats.giet || 0) + (stats.hoiSinh || 0) - (stats.chet || 0)) * c.kda;
+
+    // Calculate additive special multiplier
+    let bonusPercent = 0;
+    activeSlotIndices.forEach(idx => {
+        if (state.slots[idx]) {
+            bonusPercent += state.slots[idx].value;
+        }
+    });
+
+    const multiplier = 1 + (bonusPercent / 100);
+    const finalScore = baseScore * multiplier;
+
+    return {
+        baseScore: Math.round(baseScore),
+        bonusPercent,
+        multiplier,
+        finalScore: Math.round(finalScore),
+        breakdown: {
+            stNguoi: Math.round((stats.stNguoi || 0) * c.stNguoi),
+            stTru: Math.round((stats.stTru || 0) * c.stTru),
+            triLieu: Math.round((stats.triLieu || 0) * c.triLieu),
+            doDon: Math.round((stats.doDon || 0) * c.doDon),
+            hoTro: Math.round((stats.hoTro || 0) * c.hoTro),
+            vatTu: Math.round((stats.vatTu || 0) * c.vatTu),
+            kda: Math.round(((stats.giet || 0) + (stats.hoiSinh || 0) - (stats.chet || 0)) * c.kda)
+        }
+    };
+}
+
+function getTier(score, benchmark) {
+    if (benchmark <= 0) return { tier: '-', class: '' };
+    const pct = (score / benchmark) * 100;
+    const t = state.thresholds;
+    if (pct >= t.s) return { tier: 'S', class: 'tier-S', pct };
+    if (pct >= t.a) return { tier: 'A', class: 'tier-A', pct };
+    if (pct >= t.b) return { tier: 'B', class: 'tier-B', pct };
+    if (pct >= t.c) return { tier: 'C', class: 'tier-C', pct };
+    return { tier: 'D', class: 'tier-D', pct };
+}
+
+function getBenchmark() {
+    if (state.benchmarkMode === 'manual') return state.benchmarkManual;
+    if (state.players.length === 0) return 0;
+    const totalScore = state.players.reduce((sum, p) => sum + p.result.finalScore, 0);
+    return Math.round(totalScore / state.players.length);
+}
+
+// ═══════════════════════════════════════════════
+// PLAYER CRUD
+// ═══════════════════════════════════════════════
+
+function getFormData() {
+    return {
+        name: document.getElementById('playerName').value.trim(),
+        stats: {
+            stNguoi: parseFloat(document.getElementById('statStNguoi').value) || 0,
+            stTru: parseFloat(document.getElementById('statStTru').value) || 0,
+            triLieu: parseFloat(document.getElementById('statTriLieu').value) || 0,
+            doDon: parseFloat(document.getElementById('statDoDon').value) || 0,
+            hoTro: parseFloat(document.getElementById('statHoTro').value) || 0,
+            vatTu: parseFloat(document.getElementById('statVatTu').value) || 0,
+            giet: parseFloat(document.getElementById('statGiet').value) || 0,
+            hoiSinh: parseFloat(document.getElementById('statHoiSinh').value) || 0,
+            chet: parseFloat(document.getElementById('statChet').value) || 0
+        },
+        activeSlots: getActiveSlots()
+    };
+}
+
+function getActiveSlots() {
+    const checks = document.querySelectorAll('#multiplierChecks input[type="checkbox"]');
+    const active = [];
+    checks.forEach((cb, idx) => {
+        if (cb.checked) active.push(idx);
+    });
+    return active;
+}
+
+function addOrUpdatePlayer() {
+    const data = getFormData();
+    if (!data.name) {
+        toast('⚠️ Vui lòng nhập tên thành viên');
+        document.getElementById('playerName').focus();
+        return;
+    }
+
+    const result = calculateScore(data.stats, data.activeSlots);
+
+    if (state.editingId !== null) {
+        // Update existing
+        const idx = state.players.findIndex(p => p.id === state.editingId);
+        if (idx !== -1) {
+            state.players[idx] = {
+                ...state.players[idx],
+                name: data.name,
+                stats: data.stats,
+                activeSlots: data.activeSlots,
+                result
+            };
+        }
+        state.editingId = null;
+        document.getElementById('btnAdd').innerHTML = '➕ THÊM';
+        document.getElementById('inputTitle').textContent = 'NHẬP CHỈ SỐ THÀNH VIÊN';
+        toast('✅ Đã cập nhật ' + data.name);
+    } else {
+        // Add new
+        state.players.push({
+            id: state.nextId++,
+            name: data.name,
+            stats: data.stats,
+            activeSlots: data.activeSlots,
+            result
+        });
+        toast('✅ Đã thêm ' + data.name);
+    }
+
+    clearForm();
+    recalculateAll();
+    renderPlayers();
+    updateSummary();
+    saveState();
+}
+
+function editPlayer(id) {
+    const player = state.players.find(p => p.id === id);
+    if (!player) return;
+
+    state.editingId = id;
+
+    document.getElementById('playerName').value = player.name;
+    document.getElementById('statStNguoi').value = player.stats.stNguoi || '';
+    document.getElementById('statStTru').value = player.stats.stTru || '';
+    document.getElementById('statTriLieu').value = player.stats.triLieu || '';
+    document.getElementById('statDoDon').value = player.stats.doDon || '';
+    document.getElementById('statHoTro').value = player.stats.hoTro || '';
+    document.getElementById('statVatTu').value = player.stats.vatTu || '';
+    document.getElementById('statGiet').value = player.stats.giet || '';
+    document.getElementById('statHoiSinh').value = player.stats.hoiSinh || '';
+    document.getElementById('statChet').value = player.stats.chet || '';
+
+    // Set multiplier checkboxes
+    const checks = document.querySelectorAll('#multiplierChecks input[type="checkbox"]');
+    checks.forEach((cb, idx) => {
+        cb.checked = player.activeSlots.includes(idx);
+    });
+
+    document.getElementById('btnAdd').innerHTML = '💾 CẬP NHẬT';
+    document.getElementById('inputTitle').textContent = 'SỬA: ' + player.name;
+    document.getElementById('playerName').focus();
+
+    // Highlight the card
+    document.querySelectorAll('.player-card').forEach(c => c.classList.remove('editing'));
+    const card = document.querySelector(`[data-player-id="${id}"]`);
+    if (card) card.classList.add('editing');
+
+    // Scroll to top on mobile
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function deletePlayer(id) {
+    const player = state.players.find(p => p.id === id);
+    state.players = state.players.filter(p => p.id !== id);
+    if (state.editingId === id) {
+        state.editingId = null;
+        clearForm();
+        document.getElementById('btnAdd').innerHTML = '➕ THÊM';
+        document.getElementById('inputTitle').textContent = 'NHẬP CHỈ SỐ THÀNH VIÊN';
+    }
+    recalculateAll();
+    renderPlayers();
+    updateSummary();
+    saveState();
+    toast('🗑️ Đã xóa ' + (player ? player.name : ''));
+}
+
+function clearForm() {
+    document.getElementById('playerName').value = '';
+    ['statStNguoi','statStTru','statTriLieu','statDoDon','statHoTro','statVatTu','statGiet','statHoiSinh','statChet'].forEach(id => {
+        document.getElementById(id).value = '';
+    });
+    document.querySelectorAll('#multiplierChecks input[type="checkbox"]').forEach(cb => cb.checked = false);
+
+    if (state.editingId !== null) {
+        state.editingId = null;
+        document.getElementById('btnAdd').innerHTML = '➕ THÊM';
+        document.getElementById('inputTitle').textContent = 'NHẬP CHỈ SỐ THÀNH VIÊN';
+        document.querySelectorAll('.player-card').forEach(c => c.classList.remove('editing'));
+    }
+}
+
+function clearAllPlayers() {
+    if (state.players.length === 0) return;
+    if (!confirm('Xóa tất cả ' + state.players.length + ' thành viên?')) return;
+    state.players = [];
+    state.editingId = null;
+    clearForm();
+    document.getElementById('btnAdd').innerHTML = '➕ THÊM';
+    document.getElementById('inputTitle').textContent = 'NHẬP CHỈ SỐ THÀNH VIÊN';
+    renderPlayers();
+    updateSummary();
+    saveState();
+    toast('🗑️ Đã xóa tất cả');
+}
+
+function recalculateAll() {
+    state.players.forEach(p => {
+        p.result = calculateScore(p.stats, p.activeSlots);
+    });
+    updateBenchmark();
+}
+
+// ═══════════════════════════════════════════════
+// RENDERING
+// ═══════════════════════════════════════════════
+
+function renderPlayers() {
+    const list = document.getElementById('playerList');
+    const benchmark = getBenchmark();
+
+    if (state.players.length === 0) {
+        list.innerHTML = `
+            <div class="empty-state">
+                <div class="icon">⚔️</div>
+                <p>Chưa có thành viên nào.<br>Nhập chỉ số bên trái để bắt đầu.</p>
+            </div>`;
+        document.getElementById('benchmarkDisplay').textContent = '0';
+        return;
+    }
+
+    // Sort by score descending
+    const sorted = [...state.players].sort((a, b) => b.result.finalScore - a.result.finalScore);
+
+    list.innerHTML = sorted.map(player => {
+        const tier = getTier(player.result.finalScore, benchmark);
+        const pctText = tier.pct !== undefined ? Math.round(tier.pct) + '%' : '';
+        const isEditing = player.id === state.editingId;
+
+        return `
+            <div class="player-card ${isEditing ? 'editing' : ''}" data-player-id="${player.id}">
+                <div class="tier-badge ${tier.class}">${tier.tier}</div>
+                <div class="player-info" onclick="showDetail(${player.id})">
+                    <div class="player-name">${escapeHtml(player.name)} ${getFactionBadge(player.monPhai)}</div>
+                    <div class="player-breakdown">
+                        ${player.result.bonusPercent > 0 ? `<span style="color:var(--accent-purple)">+${player.result.bonusPercent}%</span> · ` : ''}
+                        Base: ${formatNumber(player.result.baseScore)}
+                    </div>
+                </div>
+                <div class="player-score" onclick="showDetail(${player.id})">
+                    <div class="score-value">${formatNumber(player.result.finalScore)}</div>
+                    <div class="score-percent">${pctText}</div>
+                </div>
+                <div class="player-actions" style="display:flex;">
+                    <button class="btn btn-secondary btn-sm" onclick="editPlayer(${player.id})">✏️ Sửa</button>
+                    <button class="btn btn-danger btn-sm" onclick="deletePlayer(${player.id})">🗑️ Xóa</button>
+                    <button class="btn btn-secondary btn-sm" onclick="showDetail(${player.id})">📊 Chi tiết</button>
+                </div>
+            </div>`;
+    }).join('');
+
+    document.getElementById('benchmarkDisplay').textContent = formatNumber(benchmark);
+    renderLeaderboard();
+    renderBatchAssign();
+}
+
+function renderMultiplierChecks() {
+    const container = document.getElementById('multiplierChecks');
+    container.innerHTML = state.slots.map((slot, idx) => `
+        <label class="multiplier-check">
+            <input type="checkbox" data-slot-idx="${idx}">
+            <span class="mc-name">${escapeHtml(slot.name)}</span>
+            <span class="mc-value">+${slot.value}%</span>
+        </label>
+    `).join('');
+}
+
+function renderSlots() {
+    const container = document.getElementById('slotContainer');
+    container.innerHTML = state.slots.map((slot, idx) => `
+        <div class="slot-row">
+            <input type="text" class="slot-name-input" value="${escapeHtml(slot.name)}"
+                   onchange="updateSlot(${idx}, 'name', this.value)" placeholder="Tên vai trò...">
+            <input type="number" class="slot-value-input" value="${slot.value}"
+                   onchange="updateSlot(${idx}, 'value', parseFloat(this.value) || 0)" step="1">
+            <span class="slot-percent">%</span>
+            <button class="slot-delete" onclick="removeSlot(${idx})" title="Xóa">✕</button>
+        </div>
+    `).join('');
+}
+
+// ═══════════════════════════════════════════════
+// LEADERBOARD RENDERING
+// ═══════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════
+// FACTION BADGE HELPERS
+// ═══════════════════════════════════════════════
+
+// SVG icons matching in-game faction emblems
+const FACTION_SVGS = {
+    huyetha: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none"><path d="M12 2c-1 2-3 4-4.5 7C6 12 5 14.5 5 16.5 5 20 8 22 12 22s7-2 7-5.5c0-2-1-4.5-2.5-7.5C15 6 13 4 12 2z" fill="#ff4444" opacity="0.85"/><path d="M12 8c-.8 1.5-2 3.5-2.8 5.5-.5 1.2-.7 2.3-.7 3 0 2.2 1.6 3.5 3.5 3.5s3.5-1.3 3.5-3.5c0-.7-.2-1.8-.7-3C14 11.5 12.8 9.5 12 8z" fill="#ff6b6b" opacity="0.6"/><path d="M9 5c-1 1-2.5 3-3.5 5" stroke="#ff4444" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/></svg>`,
+    thanthuong: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none"><path d="M12 2c-1 2-3 4-4.5 7C6 12 5 14.5 5 16.5 5 20 8 22 12 22s7-2 7-5.5c0-2-1-4.5-2.5-7.5C15 6 13 4 12 2z" fill="#4466ff" opacity="0.85"/><path d="M12 8c-.8 1.5-2 3.5-2.8 5.5-.5 1.2-.7 2.3-.7 3 0 2.2 1.6 3.5 3.5 3.5s3.5-1.3 3.5-3.5c0-.7-.2-1.8-.7-3C14 11.5 12.8 9.5 12 8z" fill="#6688ff" opacity="0.6"/><path d="M9 5c-1 1-2.5 3-3.5 5" stroke="#4466ff" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/></svg>`,
+    cuulinh: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none"><path d="M12 3C9 3 7 5 7 7c0 1.5.8 2.8 2 3.5L8 13l-2 3c-.5.8-.3 1.5.5 2l2 1c.5.3 1 .2 1.3-.2L12 16l2.2 2.8c.3.4.8.5 1.3.2l2-1c.8-.5 1-1.2.5-2l-2-3-1-2.5c1.2-.7 2-2 2-3.5 0-2-2-4-5-4z" fill="#9944dd" opacity="0.85"/><circle cx="10" cy="7" r="1" fill="#cc88ff" opacity="0.8"/><circle cx="14" cy="7" r="1" fill="#cc88ff" opacity="0.8"/><path d="M6 8c-1-.5-2-1-2.5-2M18 8c1-.5 2-1 2.5-2" stroke="#9944dd" stroke-width="1" stroke-linecap="round" opacity="0.6"/></svg>`,
+    longngam: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none"><circle cx="12" cy="12" r="9" stroke="#22cc66" stroke-width="1.5" opacity="0.5" fill="none"/><path d="M12 4L10 8l-1 4 1 4 2 4 2-4 1-4-1-4-2-4z" fill="#22cc66" opacity="0.7"/><path d="M12 6v12M8 12h8" stroke="#22cc66" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/><path d="M12 4l-1 2 1 1 1-1-1-2z" fill="#44ee88" opacity="0.9"/><path d="M10 19l2 2 2-2" stroke="#22cc66" stroke-width="1.2" stroke-linecap="round" fill="none" opacity="0.6"/></svg>`,
+    tovan: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none"><circle cx="12" cy="12" r="9" stroke="#ff88aa" stroke-width="1.5" opacity="0.6" fill="none"/><path d="M12 3a9 9 0 010 18" stroke="#ff88aa" stroke-width="2" opacity="0.9" fill="none"/><circle cx="12" cy="12" r="4" fill="#ff88aa" opacity="0.25"/><path d="M8 9c1-2 3-3 5-2.5M16 15c-1 2-3 3-5 2.5" stroke="#ffaacc" stroke-width="1" stroke-linecap="round" opacity="0.7"/></svg>`,
+    toaimong: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none"><path d="M6 4l12 16M18 4L6 20" stroke="#00ccbb" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/><path d="M12 6l-3 3 3 3 3-3-3-3z" fill="#00ccbb" opacity="0.4"/><path d="M12 12l-3 3 3 3 3-3-3-3z" fill="#00ccbb" opacity="0.3"/><circle cx="12" cy="12" r="2" fill="#00eedd" opacity="0.7"/></svg>`,
+    thiiety: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none"><path d="M12 3L4 8v6c0 5 3.5 7.5 8 10 4.5-2.5 8-5 8-10V8l-8-5z" fill="#ddaa22" opacity="0.25" stroke="#ddaa22" stroke-width="1.2"/><path d="M12 6L7 9v4.5c0 3.5 2.2 5.5 5 7 2.8-1.5 5-3.5 5-7V9l-5-3z" fill="#ddaa22" opacity="0.4"/><path d="M12 10v6M9 13h6" stroke="#ffcc33" stroke-width="1.5" stroke-linecap="round" opacity="0.8"/></svg>`,
+};
+
+const FACTION_MAP = {
+    'huyetha':    { label: 'Huyết Hà',   cls: 'f-huyetha',    svg: 'huyetha' },
+    'huyết hà':  { label: 'Huyết Hà',   cls: 'f-huyetha',    svg: 'huyetha' },
+    'toaimong':   { label: 'Toái Mộng',  cls: 'f-toaimong',   svg: 'toaimong' },
+    'toái mộng':  { label: 'Toái Mộng',  cls: 'f-toaimong',   svg: 'toaimong' },
+    'thanthuong': { label: 'Thần Tương', cls: 'f-thanthuong', svg: 'thanthuong' },
+    'thần tương': { label: 'Thần Tương', cls: 'f-thanthuong', svg: 'thanthuong' },
+    'cuulinh':    { label: 'Cửu Linh',   cls: 'f-cuulinh',    svg: 'cuulinh' },
+    'cửu linh':   { label: 'Cửu Linh',   cls: 'f-cuulinh',    svg: 'cuulinh' },
+    'longngam':   { label: 'Long Ngâm',  cls: 'f-longngam',   svg: 'longngam' },
+    'long ngâm':  { label: 'Long Ngâm',  cls: 'f-longngam',   svg: 'longngam' },
+    'thiiety':    { label: 'Thiết Y',    cls: 'f-thiiety',    svg: 'thiiety' },
+    'thiết y':    { label: 'Thiết Y',    cls: 'f-thiiety',    svg: 'thiiety' },
+    'tovan':      { label: 'Tố Vấn',    cls: 'f-tovan',      svg: 'tovan' },
+    'tố vấn':     { label: 'Tố Vấn',    cls: 'f-tovan',      svg: 'tovan' },
+};
+
+function getFactionBadge(monPhai) {
+    if (!monPhai) return '';
+    const key = monPhai.toLowerCase().trim();
+    const faction = FACTION_MAP[key];
+    if (!faction) return `<span class="faction-badge" style="background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.15);color:var(--text-muted)">${escapeHtml(monPhai)}</span>`;
+    const svgIcon = FACTION_SVGS[faction.svg] || '';
+    return `<span class="faction-badge ${faction.cls}">${svgIcon} ${faction.label}</span>`;
+}
+
+function getFilteredSortedPlayers() {
+    const searchTerm = (document.getElementById('lbSearch')?.value || '').toLowerCase().trim();
+    const filterFaction = document.getElementById('lbFilterFaction')?.value || '';
+    const filterTier = document.getElementById('lbFilterTier')?.value || '';
+    const benchmark = getBenchmark();
+
+    let filtered = [...state.players];
+
+    if (searchTerm) {
+        filtered = filtered.filter(p => p.name.toLowerCase().includes(searchTerm));
+    }
+    if (filterFaction) {
+        filtered = filtered.filter(p => {
+            if (!p.monPhai) return false;
+            const key = p.monPhai.toLowerCase().trim();
+            const faction = FACTION_MAP[key];
+            return faction && faction.label === filterFaction;
+        });
+    }
+    if (filterTier) {
+        filtered = filtered.filter(p => {
+            const tier = getTier(p.result.finalScore, benchmark);
+            return tier.tier === filterTier;
+        });
+    }
+
+    // Sort
+    if (lbSortKey === 'finalScore') {
+        filtered.sort((a, b) => b.result.finalScore - a.result.finalScore);
+    } else {
+        filtered.sort((a, b) => (b.stats[lbSortKey] || 0) - (a.stats[lbSortKey] || 0));
+    }
+
+    return filtered;
+}
+
+function changeLbSort(key) {
+    lbSortKey = key;
+    document.querySelectorAll('.sort-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.sort === key);
+    });
+    renderLeaderboard();
+}
+
+function renderLeaderboard() {
+    const top10El = document.getElementById('leaderboardTop10');
+    const restEl = document.getElementById('leaderboardRest');
+    const benchmark = getBenchmark();
+
+    if (state.players.length === 0) {
+        top10El.innerHTML = `
+            <div style="grid-column:1/-1;text-align:center;padding:48px 24px;color:var(--text-muted);">
+                <div style="font-size:2.4rem;opacity:0.5;margin-bottom:12px;">&#9876;&#65039;</div>
+                <p>Chưa có chiến binh nào.<br>Hãy nhập chỉ số ở tab TÍNH ĐIỂM.</p>
+            </div>`;
+        restEl.innerHTML = '';
+        renderFactionStats();
+        renderAnomalies();
+        return;
+    }
+
+    const sorted = getFilteredSortedPlayers();
+
+    if (sorted.length === 0) {
+        top10El.innerHTML = `
+            <div style="grid-column:1/-1;text-align:center;padding:32px 24px;color:var(--text-muted);">
+                <p>🔍 Không tìm thấy kết quả phù hợp.</p>
+            </div>`;
+        restEl.innerHTML = '';
+        return;
+    }
+
+    const top10 = sorted.slice(0, 10);
+    const rest = sorted.slice(10);
+
+    const medals = ['\uD83E\uDD47', '\uD83E\uDD48', '\uD83E\uDD49'];
+    const rankClass = ['r1', 'r2', 'r3'];
+    const cardClass = ['rank-1', 'rank-2', 'rank-3'];
+
+    // Get previous season for trend comparison
+    const prevSeason = state.seasons && state.seasons.length > 0 ? state.seasons[state.seasons.length - 1] : null;
+
+    top10El.innerHTML = top10.map((p, idx) => {
+        const tier = getTier(p.result.finalScore, benchmark);
+        const pctText = tier.pct !== undefined ? Math.round(tier.pct) + '%' : '';
+        const rc = idx < 3 ? rankClass[idx] : 'r-normal';
+        const cc = idx < 3 ? cardClass[idx] : '';
+        const medal = idx < 3 ? `<span class="rank-medal">${medals[idx]}</span>` : '';
+        const factionBadge = getFactionBadge(p.monPhai);
+        const trend = getTrendIndicator(p.name, p.result.finalScore, prevSeason);
+        const sortVal = lbSortKey !== 'finalScore' ? `<span style="font-size:0.72rem;color:var(--text-muted);margin-left:6px;">${lbSortKey}: ${formatNumber(p.stats[lbSortKey] || 0)}</span>` : '';
+        const roles = (p.activeSlots || []).map(idx => state.slots[idx]).filter(Boolean);
+        const rolesHtml = roles.length > 0 ? `<div class="lb-roles">${roles.map(r => `<span class="lb-roles-tag">${escapeHtml(r.name)} +${r.value}%</span>`).join('')}</div>` : '';
+
+        return `
+            <div class="lb-card ${cc}" onclick="showDetail(${p.id})">
+                <div class="lb-rank ${rc}">
+                    <span class="rank-num">${idx + 1}</span>
+                    ${medal}
+                </div>
+                <div class="lb-name"><span class="lb-player-name">${escapeHtml(p.name)}</span>${rolesHtml}</div>
+                ${factionBadge}
+                <div style="text-align:right;flex-shrink:0;">
+                    <span class="lb-score">${formatNumber(p.result.finalScore)}</span>
+                    <span class="lb-pct">${pctText}</span>
+                    ${trend}${sortVal}
+                </div>
+            </div>`;
+    }).join('');
+
+    if (rest.length > 0) {
+        let restHtml = `<div class="lb-rest-title">CÁC CHIẾN BINH KHÁC (${rest.length} người)</div>`;
+        restHtml += '<div class="lb-rest">';
+        restHtml += rest.map((p, idx) => {
+            const rank = idx + 11;
+            const tier = getTier(p.result.finalScore, benchmark);
+            const factionBadge = getFactionBadge(p.monPhai);
+            const trend = getTrendIndicator(p.name, p.result.finalScore, prevSeason);
+            return `
+                <div class="lb-rest-row" onclick="showDetail(${p.id})" style="cursor:pointer;">
+                    <span class="lb-rest-rank">${rank}</span>
+                    <span class="lb-rest-tier ${tier.class}">${tier.tier}</span>
+                    <span class="lb-rest-name">${escapeHtml(p.name)}${(() => { const rl = (p.activeSlots || []).map(i => state.slots[i]).filter(Boolean); return rl.length > 0 ? ' <span style="font-size:0.62rem;color:var(--accent-purple);opacity:0.8;">(' + rl.map(r => r.name + ' +' + r.value + '%').join(', ') + ')</span>' : ''; })()}</span>
+                    ${factionBadge}
+                    ${trend}
+                    <span class="lb-rest-score">${formatNumber(p.result.finalScore)}</span>
+                </div>`;
+        }).join('');
+        restHtml += '</div>';
+        restEl.innerHTML = restHtml;
+    } else {
+        restEl.innerHTML = '';
+    }
+
+    renderFactionStats();
+    renderAnomalies();
+}
+
+// ═══════════════════════════════════════════════
+// FACTION STATS
+// ═══════════════════════════════════════════════
+
+function renderFactionStats() {
+    const grid = document.getElementById('factionStatsGrid');
+    if (!grid) return;
+
+    const factionData = {};
+    const factionOrder = ['Huyết Hà', 'Thần Tương', 'Cửu Linh', 'Long Ngâm', 'Tố Vấn', 'Toái Mộng', 'Thiết Y'];
+    const factionSvgKeys = {
+        'Huyết Hà': 'huyetha', 'Thần Tương': 'thanthuong', 'Cửu Linh': 'cuulinh',
+        'Long Ngâm': 'longngam', 'Tố Vấn': 'tovan', 'Toái Mộng': 'toaimong', 'Thiết Y': 'thiiety'
+    };
+    const factionClasses = {
+        'Huyết Hà': 'f-huyetha', 'Thần Tương': 'f-thanthuong', 'Cửu Linh': 'f-cuulinh',
+        'Long Ngâm': 'f-longngam', 'Tố Vấn': 'f-tovan', 'Toái Mộng': 'f-toaimong', 'Thiết Y': 'f-thiiety'
+    };
+
+    factionOrder.forEach(f => factionData[f] = { count: 0, totalScore: 0 });
+    let noFaction = { count: 0, totalScore: 0 };
+
+    state.players.forEach(p => {
+        if (p.monPhai) {
+            const key = p.monPhai.toLowerCase().trim();
+            const faction = FACTION_MAP[key];
+            if (faction && factionData[faction.label]) {
+                factionData[faction.label].count++;
+                factionData[faction.label].totalScore += p.result.finalScore;
+                return;
+            }
+        }
+        noFaction.count++;
+        noFaction.totalScore += p.result.finalScore;
+    });
+
+    grid.innerHTML = factionOrder.map(name => {
+        const d = factionData[name];
+        const avg = d.count > 0 ? Math.round(d.totalScore / d.count) : 0;
+        const svgKey = factionSvgKeys[name];
+        const svg = FACTION_SVGS[svgKey] || '';
+        const cls = factionClasses[name] || '';
+        return `
+            <div class="faction-stat-card">
+                <div class="fs-icon"><span class="faction-badge ${cls}" style="padding:4px 8px;">${svg} ${name}</span></div>
+                <div class="fs-count">${d.count}</div>
+                <div class="fs-avg">TB: ${formatNumber(avg)}</div>
+            </div>`;
+    }).join('') + (noFaction.count > 0 ? `
+        <div class="faction-stat-card">
+            <div class="fs-icon"><span style="color:var(--text-muted)">❓ Chưa gán</span></div>
+            <div class="fs-count">${noFaction.count}</div>
+            <div class="fs-avg">TB: ${formatNumber(noFaction.count > 0 ? Math.round(noFaction.totalScore / noFaction.count) : 0)}</div>
+        </div>` : '');
+}
+
+// ═══════════════════════════════════════════════
+// ANOMALY DETECTION
+// ═══════════════════════════════════════════════
+
+function renderAnomalies() {
+    const panel = document.getElementById('anomalyPanel');
+    if (!panel || state.players.length < 3) { if (panel) panel.style.display = 'none'; return; }
+
+    const anomalies = [];
+    const avgScore = state.players.reduce((s, p) => s + p.result.finalScore, 0) / state.players.length;
+
+    state.players.forEach(p => {
+        const stats = p.stats;
+        const zeroCount = Object.values(stats).filter(v => v === 0).length;
+        const totalKeys = Object.keys(stats).length;
+
+        // Missing data: most stats are 0
+        if (zeroCount >= totalKeys - 2 && p.result.finalScore > 0) {
+            anomalies.push({ name: p.name, type: '📋', msg: 'Thiếu nhiều chỉ số (chỉ có 1-2 loại)' });
+        }
+
+        // Extremely low score vs average
+        if (p.result.finalScore < avgScore * 0.3 && p.result.finalScore > 0) {
+            anomalies.push({ name: p.name, type: '📉', msg: `Điểm rất thấp (${Math.round(p.result.finalScore / avgScore * 100)}% TB)` });
+        }
+
+        // Zero score but has name
+        if (p.result.finalScore === 0 || (p.result.baseScore === 0 && p.result.bonusPercent === 0)) {
+            anomalies.push({ name: p.name, type: '⚠️', msg: 'Tổng điểm = 0 (chưa import data?)' });
+        }
+
+        // No faction
+        if (!p.monPhai) {
+            anomalies.push({ name: p.name, type: '🏷️', msg: 'Chưa gán môn phái' });
+        }
+    });
+
+    if (anomalies.length === 0) {
+        panel.style.display = 'none';
+        return;
+    }
+
+    panel.style.display = 'block';
+    panel.innerHTML = `
+        <div class="anomaly-panel">
+            <div class="ap-title">⚠️ CẢNH BÁO DỮ LIỆU (${anomalies.length})</div>
+            ${anomalies.slice(0, 15).map(a => `
+                <div class="anomaly-item">
+                    <span class="ai-icon">${a.type}</span>
+                    <span class="ai-name">${escapeHtml(a.name)}</span>
+                    <span>${a.msg}</span>
+                </div>
+            `).join('')}
+            ${anomalies.length > 15 ? `<div style="font-size:0.75rem;color:var(--text-muted);padding-top:6px;">... và ${anomalies.length - 15} cảnh báo khác</div>` : ''}
+        </div>`;
+}
+
+// ═══════════════════════════════════════════════
+// SEASON HISTORY
+// ═══════════════════════════════════════════════
+
+function saveSeason() {
+    const nameInput = document.getElementById('seasonNameInput');
+    const name = (nameInput?.value || '').trim() || `Kỳ ${new Date().toLocaleDateString('vi-VN')}`;
+
+    if (!state.seasons) state.seasons = [];
+
+    // Lưu đầy đủ stats để có thể load lại
+    const snapshot = state.players.map(p => ({
+        name: p.name,
+        finalScore: p.result.finalScore,
+        monPhai: p.monPhai || null,
+        stats: { ...p.stats },
+        activeSlots: [...(p.activeSlots || [])]
+    }));
+
+    state.seasons.push({
+        name,
+        date: new Date().toISOString(),
+        players: snapshot
+    });
+
+    if (nameInput) nameInput.value = '';
+    saveState();
+    renderSeasons();
+    toast(`📅 Đã lưu "${name}" (${snapshot.length} người)`);
+}
+
+function loadSeason(idx) {
+    const season = state.seasons[idx];
+    if (!season) return;
+
+    // Kiểm tra season có đủ data để load không
+    const hasFullData = season.players.length > 0 && season.players[0].stats;
+    if (!hasFullData) {
+        toast('⚠️ Kỳ này chỉ lưu điểm tổng, không có đủ dữ liệu để load lại');
+        return;
+    }
+
+    if (!confirm(`Load lại dữ liệu kỳ "${season.name}" (${season.players.length} người)?\n\n⚠️ Dữ liệu hiện tại sẽ bị thay thế!`)) return;
+
+    // Khôi phục players từ snapshot
+    state.players = season.players.map((p, i) => ({
+        id: i + 1,
+        name: p.name,
+        monPhai: p.monPhai || null,
+        stats: { ...p.stats },
+        activeSlots: [...(p.activeSlots || [])],
+        result: calculateScore(p.stats, p.activeSlots || [])
+    }));
+    state.nextId = state.players.length + 1;
+    state.editingId = null;
+
+    clearForm();
+    recalculateAll();
+    renderSlots();
+    renderMultiplierChecks();
+    renderPlayers();
+    renderLeaderboard();
+    renderBatchAssign();
+    renderProfiles();
+    updateSummary();
+    saveState();
+
+    toast(`📂 Đã load kỳ "${season.name}" — ${state.players.length} người`);
+}
+
+function deleteSeason(idx) {
+    if (!state.seasons || !state.seasons[idx]) return;
+    const name = state.seasons[idx].name;
+    state.seasons.splice(idx, 1);
+    saveState();
+    renderSeasons();
+    toast(`🗑️ Đã xóa kỳ "${name}"`);
+}
+
+function renderSeasons() {
+    const container = document.getElementById('seasonTags');
+    if (!container) return;
+    if (!state.seasons || state.seasons.length === 0) {
+        container.innerHTML = '<span style="font-size:0.75rem;color:var(--text-muted);">Chưa có kỳ nào được lưu</span>';
+        return;
+    }
+
+    container.innerHTML = state.seasons.map((s, idx) => {
+        const hasFullData = s.players.length > 0 && s.players[0].stats;
+        const loadBtn = hasFullData
+            ? `<span class="season-load" onclick="event.stopPropagation(); loadSeason(${idx})" title="Load lại dữ liệu kỳ này">📂</span>`
+            : '';
+        return `
+            <span class="season-tag" title="${s.players.length} người — ${new Date(s.date).toLocaleDateString('vi-VN')}">
+                📅 ${escapeHtml(s.name)} (${s.players.length})
+                ${loadBtn}
+                <span class="season-delete" onclick="event.stopPropagation(); deleteSeason(${idx})">✕</span>
+            </span>`;
+    }).join('');
+}
+
+function getTrendIndicator(playerName, currentScore, prevSeason) {
+    if (!prevSeason || !prevSeason.players) return '';
+    const prev = prevSeason.players.find(p => p.name.toLowerCase() === playerName.toLowerCase());
+    if (!prev) return '<span class="trend-neutral" style="font-size:0.7rem;margin-left:4px;" title="Mới">🆕</span>';
+
+    const diff = currentScore - prev.finalScore;
+    if (Math.abs(diff) < 5) return '';
+
+    if (diff > 0) {
+        return `<span class="trend-up" style="font-size:0.7rem;margin-left:4px;" title="+${formatNumber(diff)} so với ${prevSeason.name}">▲${formatNumber(diff)}</span>`;
+    } else {
+        return `<span class="trend-down" style="font-size:0.7rem;margin-left:4px;" title="${formatNumber(diff)} so với ${prevSeason.name}">▼${formatNumber(Math.abs(diff))}</span>`;
+    }
+}
+
+// ═══════════════════════════════════════════════
+// BACKUP / RESTORE
+// ═══════════════════════════════════════════════
+
+function downloadBackup() {
+    const backup = JSON.stringify(state, null, 2);
+    const blob = new Blob([backup], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bangchien-backup-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('📥 Đã tải backup xuống!');
+}
+
+function restoreBackup(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const parsed = JSON.parse(e.target.result);
+            if (!parsed.players || !Array.isArray(parsed.players)) {
+                toast('❌ File backup không hợp lệ');
+                return;
+            }
+            state = {
+                ...state,
+                ...parsed,
+                coefficients: { ...DEFAULT_COEFFICIENTS, ...parsed.coefficients },
+                thresholds: { ...DEFAULT_THRESHOLDS, ...parsed.thresholds }
+            };
+            if (!state.slots || state.slots.length === 0) {
+                state.slots = JSON.parse(JSON.stringify(DEFAULT_SLOTS));
+            }
+            if (!state.seasons) state.seasons = [];
+            recalculateAll();
+            renderSlots();
+            renderMultiplierChecks();
+            renderPlayers();
+            renderLeaderboard();
+            renderBatchAssign();
+            renderProfiles();
+            renderSeasons();
+            updateSummary();
+            applySettingsToUI();
+            saveState();
+            toast(`✅ Đã khôi phục: ${state.players.length} người, ${state.seasons.length} kỳ`);
+        } catch (err) {
+            toast('❌ Lỗi đọc file: ' + err.message);
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
+
+// ═══════════════════════════════════════════════
+// BATCH ASSIGN ROLES
+// ═══════════════════════════════════════════════
+
+function renderBatchAssign() {
+    const playerList = document.getElementById('baPlayerList');
+    const rolesGrid = document.getElementById('baRolesGrid');
+
+    if (!playerList || !rolesGrid) return;
+
+    // Sort players by score descending
+    const sorted = [...state.players].sort((a, b) => b.result.finalScore - a.result.finalScore);
+
+    playerList.innerHTML = sorted.map(p => {
+        const roles = (p.activeSlots || []).map(idx => state.slots[idx]?.name).filter(Boolean).join(', ');
+        return `
+            <div class="ba-player-row" onclick="baTogglePlayer(this, ${p.id})">
+                <input type="checkbox" data-ba-player="${p.id}">
+                <span class="ba-player-name">${escapeHtml(p.name)}</span>
+                <span class="ba-player-roles">${roles ? escapeHtml(roles) : ''}</span>
+            </div>`;
+    }).join('');
+
+    if (sorted.length === 0) {
+        playerList.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:0.82rem;">Chưa có thành viên</div>';
+    }
+
+    rolesGrid.innerHTML = state.slots.map((slot, idx) => `
+        <label class="ba-role-chip">
+            <input type="checkbox" data-ba-role="${idx}">
+            <span class="ba-role-name">${escapeHtml(slot.name)}</span>
+            <span class="ba-role-value">+${slot.value}%</span>
+        </label>
+    `).join('');
+
+    updateBaCount();
+}
+
+function baTogglePlayer(row, id) {
+    const cb = row.querySelector('input[type="checkbox"]');
+    cb.checked = !cb.checked;
+    row.classList.toggle('selected', cb.checked);
+    updateBaCount();
+}
+
+function baSelectAll() {
+    document.querySelectorAll('#baPlayerList input[type="checkbox"]').forEach(cb => {
+        cb.checked = true;
+        cb.closest('.ba-player-row')?.classList.add('selected');
+    });
+    updateBaCount();
+}
+
+function baSelectNone() {
+    document.querySelectorAll('#baPlayerList input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+        cb.closest('.ba-player-row')?.classList.remove('selected');
+    });
+    updateBaCount();
+}
+
+function updateBaCount() {
+    const count = document.querySelectorAll('#baPlayerList input[type="checkbox"]:checked').length;
+    const el = document.getElementById('baSelectedCount');
+    if (el) el.textContent = count + ' đã chọn';
+}
+
+function batchAssignRoles() {
+    const selectedPlayerIds = [];
+    document.querySelectorAll('#baPlayerList input[type="checkbox"]:checked').forEach(cb => {
+        selectedPlayerIds.push(parseInt(cb.dataset.baPlayer));
+    });
+
+    const selectedRoleIndices = [];
+    document.querySelectorAll('#baRolesGrid input[type="checkbox"]:checked').forEach(cb => {
+        selectedRoleIndices.push(parseInt(cb.dataset.baRole));
+    });
+
+    if (selectedPlayerIds.length === 0) { toast('⚠️ Chưa chọn người chơi'); return; }
+    if (selectedRoleIndices.length === 0) { toast('⚠️ Chưa chọn vai trò'); return; }
+
+    let count = 0;
+    selectedPlayerIds.forEach(pid => {
+        const player = state.players.find(p => p.id === pid);
+        if (player) {
+            // Merge roles (add new, keep existing)
+            const existing = new Set(player.activeSlots || []);
+            selectedRoleIndices.forEach(idx => existing.add(idx));
+            player.activeSlots = [...existing];
+            player.result = calculateScore(player.stats, player.activeSlots);
+            count++;
+        }
+    });
+
+    recalculateAll();
+    renderPlayers();
+    renderLeaderboard();
+    renderBatchAssign();
+    updateSummary();
+    saveState();
+    toast(`⚡ Đã gán vai trò cho ${count} người`);
+}
+
+function batchClearRoles() {
+    const selectedPlayerIds = [];
+    document.querySelectorAll('#baPlayerList input[type="checkbox"]:checked').forEach(cb => {
+        selectedPlayerIds.push(parseInt(cb.dataset.baPlayer));
+    });
+
+    if (selectedPlayerIds.length === 0) { toast('⚠️ Chưa chọn người chơi'); return; }
+
+    const selectedRoleIndices = [];
+    document.querySelectorAll('#baRolesGrid input[type="checkbox"]:checked').forEach(cb => {
+        selectedRoleIndices.push(parseInt(cb.dataset.baRole));
+    });
+
+    let count = 0;
+    selectedPlayerIds.forEach(pid => {
+        const player = state.players.find(p => p.id === pid);
+        if (player) {
+            if (selectedRoleIndices.length > 0) {
+                // Remove only selected roles
+                player.activeSlots = (player.activeSlots || []).filter(idx => !selectedRoleIndices.includes(idx));
+            } else {
+                // No roles selected = clear ALL roles
+                player.activeSlots = [];
+            }
+            player.result = calculateScore(player.stats, player.activeSlots);
+            count++;
+        }
+    });
+
+    recalculateAll();
+    renderPlayers();
+    renderLeaderboard();
+    renderBatchAssign();
+    updateSummary();
+    saveState();
+    toast(`🗑️ Đã xóa vai trò của ${count} người`);
+}
+
+// ═══════════════════════════════════════════════
+// TEAM PROFILES
+// ═══════════════════════════════════════════════
+
+function renderProfiles() {
+    const container = document.getElementById('profileList');
+    if (!container) return;
+
+    if (!state.profiles || state.profiles.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:0.82rem;">Chưa có đội hình nào được lưu</div>';
+        return;
+    }
+
+    container.innerHTML = state.profiles.map((prof, idx) => {
+        const roleCount = Object.values(prof.assignments).filter(slots => slots.length > 0).length;
+        return `
+            <div class="profile-item">
+                <span class="profile-name">${escapeHtml(prof.name)}</span>
+                <span class="profile-count">${roleCount} người có vai trò</span>
+                <button class="btn btn-primary btn-sm" onclick="loadProfile(${idx})">📂 Load</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteProfile(${idx})">✕</button>
+            </div>`;
+    }).join('');
+}
+
+function saveProfile() {
+    const nameInput = document.getElementById('profileNameInput');
+    const name = nameInput.value.trim();
+    if (!name) { toast('⚠️ Nhập tên đội hình'); nameInput.focus(); return; }
+
+    // Capture current role assignments: { playerName: [slotIndices] }
+    const assignments = {};
+    state.players.forEach(p => {
+        if (p.activeSlots && p.activeSlots.length > 0) {
+            assignments[p.name] = [...p.activeSlots];
+        }
+    });
+
+    if (Object.keys(assignments).length === 0) {
+        toast('⚠️ Chưa có ai được gán vai trò');
+        return;
+    }
+
+    // Check if profile name already exists
+    const existingIdx = state.profiles.findIndex(pr => pr.name.toLowerCase() === name.toLowerCase());
+    if (existingIdx >= 0) {
+        state.profiles[existingIdx].assignments = assignments;
+        toast(`📋 Đã cập nhật đội hình "${name}"`);
+    } else {
+        state.profiles.push({ name, assignments });
+        toast(`💾 Đã lưu đội hình "${name}" (${Object.keys(assignments).length} vai trò)`);
+    }
+
+    nameInput.value = '';
+    saveState();
+    renderProfiles();
+}
+
+function loadProfile(idx) {
+    const profile = state.profiles[idx];
+    if (!profile) return;
+
+    let matched = 0, notFound = [];
+
+    // Clear all current roles first
+    state.players.forEach(p => { p.activeSlots = []; });
+
+    // Apply profile assignments
+    Object.entries(profile.assignments).forEach(([playerName, slots]) => {
+        const player = state.players.find(p => p.name.toLowerCase() === playerName.toLowerCase());
+        if (player) {
+            player.activeSlots = [...slots];
+            matched++;
+        } else {
+            notFound.push(playerName);
+        }
+    });
+
+    // Recalculate
+    state.players.forEach(p => {
+        p.result = calculateScore(p.stats, p.activeSlots);
+    });
+
+    recalculateAll();
+    renderPlayers();
+    renderLeaderboard();
+    renderBatchAssign();
+    renderMultiplierChecks();
+    updateSummary();
+    saveState();
+
+    let msg = `📂 Loaded "${profile.name}" — ${matched} người gán vai trò`;
+    if (notFound.length > 0) {
+        msg += ` (${notFound.length} không tìm thấy)`;
+    }
+    toast(msg);
+}
+
+function deleteProfile(idx) {
+    const name = state.profiles[idx]?.name || '';
+    state.profiles.splice(idx, 1);
+    saveState();
+    renderProfiles();
+    toast(`🗑️ Đã xóa đội hình "${name}"`);
+}
+
+function updateSummary() {
+    const benchmark = getBenchmark();
+    let counts = { total: state.players.length, s: 0, a: 0, b: 0, cd: 0 };
+
+    state.players.forEach(p => {
+        const tier = getTier(p.result.finalScore, benchmark);
+        if (tier.tier === 'S') counts.s++;
+        else if (tier.tier === 'A') counts.a++;
+        else if (tier.tier === 'B') counts.b++;
+        else counts.cd++;
+    });
+
+    document.getElementById('sumTotal').textContent = counts.total;
+    document.getElementById('sumS').textContent = counts.s;
+    document.getElementById('sumA').textContent = counts.a;
+    document.getElementById('sumB').textContent = counts.b;
+    document.getElementById('sumCD').textContent = counts.cd;
+}
+
+// ═══════════════════════════════════════════════
+// DETAIL MODAL
+// ═══════════════════════════════════════════════
+
+function showDetail(id) {
+    const player = state.players.find(p => p.id === id);
+    if (!player) return;
+
+    const benchmark = getBenchmark();
+    const tier = getTier(player.result.finalScore, benchmark);
+    const bd = player.result.breakdown;
+    const stats = player.stats;
+
+    const kdaNet = (stats.giet || 0) + (stats.hoiSinh || 0) - (stats.chet || 0);
+
+    let html = `
+        <table class="breakdown-table">
+            <tr><td>Sát thương người</td><td>${formatNumber(stats.stNguoi || 0)} × ${state.coefficients.stNguoi}</td><td>${formatNumber(bd.stNguoi)}</td></tr>
+            <tr><td>Sát thương trụ</td><td>${formatNumber(stats.stTru || 0)} × ${state.coefficients.stTru}</td><td>${formatNumber(bd.stTru)}</td></tr>
+            <tr><td>Trị liệu</td><td>${formatNumber(stats.triLieu || 0)} × ${state.coefficients.triLieu}</td><td>${formatNumber(bd.triLieu)}</td></tr>
+            <tr><td>Đỡ đòn</td><td>${formatNumber(stats.doDon || 0)} × ${state.coefficients.doDon}</td><td>${formatNumber(bd.doDon)}</td></tr>
+            <tr><td>Hỗ trợ</td><td>${formatNumber(stats.hoTro || 0)} × ${state.coefficients.hoTro}</td><td>${formatNumber(bd.hoTro)}</td></tr>
+            <tr><td>Vật tư</td><td>${formatNumber(stats.vatTu || 0)} × ${state.coefficients.vatTu}</td><td>${formatNumber(bd.vatTu)}</td></tr>
+            <tr><td>KDA (${stats.giet||0}+${stats.hoiSinh||0}-${stats.chet||0})</td><td>${kdaNet} × ${state.coefficients.kda}</td><td>${formatNumber(bd.kda)}</td></tr>
+            <tr class="total"><td>TỔNG GỐC</td><td></td><td>${formatNumber(player.result.baseScore)}</td></tr>
+        </table>`;
+
+    if (player.result.bonusPercent > 0) {
+        const activeNames = player.activeSlots
+            .filter(idx => state.slots[idx])
+            .map(idx => `<div class="bm-item">• ${escapeHtml(state.slots[idx].name)} (+${state.slots[idx].value}%)</div>`)
+            .join('');
+
+        html += `
+        <div class="breakdown-multipliers">
+            <div class="bm-title">HỆ SỐ ĐẶC BIỆT: ×${player.result.multiplier.toFixed(2)} (+${player.result.bonusPercent}%)</div>
+            ${activeNames}
+        </div>`;
+    }
+
+    html += `
+        <div style="margin-top:16px;text-align:center;">
+            <div style="font-size:0.82rem;color:var(--text-muted);">ĐIỂM SAU HỆ SỐ</div>
+            <div style="font-family:var(--font-display);font-size:2rem;font-weight:700;color:var(--accent-cyan);">${formatNumber(player.result.finalScore)}</div>
+            <div class="tier-badge ${tier.class}" style="display:inline-flex;margin-top:6px;font-size:1rem;width:32px;height:32px;">
+                ${tier.tier}
+            </div>
+            <span style="color:var(--text-secondary);font-size:0.85rem;margin-left:8px;">
+                ${tier.pct !== undefined ? Math.round(tier.pct) + '% mốc chuẩn' : ''}
+            </span>
+        </div>`;
+
+    document.getElementById('modalTitle').textContent = '📊 ' + player.name;
+    document.getElementById('modalBody').innerHTML = html;
+    document.getElementById('detailModal').classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('detailModal').classList.remove('active');
+}
+
+// ═══════════════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════════════
+
+function updateBenchmark() {
+    const mode = document.getElementById('benchmarkMode').value;
+    state.benchmarkMode = mode;
+    const manualInput = document.getElementById('benchmarkManual');
+
+    if (mode === 'manual') {
+        manualInput.style.display = '';
+        state.benchmarkManual = parseFloat(manualInput.value) || 0;
+    } else {
+        manualInput.style.display = 'none';
+    }
+
+    renderPlayers();
+    updateSummary();
+    saveState();
+}
+
+function updateSlot(idx, field, value) {
+    if (state.slots[idx]) {
+        state.slots[idx][field] = value;
+        renderMultiplierChecks();
+        recalculateAll();
+        renderPlayers();
+        updateSummary();
+        saveState();
+    }
+}
+
+function addSlot() {
+    state.slots.push({ name: 'Vai trò mới', value: 10 });
+    renderSlots();
+    renderMultiplierChecks();
+    saveState();
+}
+
+function removeSlot(idx) {
+    state.slots.splice(idx, 1);
+    // Fix activeSlots references in players
+    state.players.forEach(p => {
+        p.activeSlots = p.activeSlots
+            .filter(i => i !== idx)
+            .map(i => i > idx ? i - 1 : i);
+    });
+    renderSlots();
+    renderMultiplierChecks();
+    recalculateAll();
+    renderPlayers();
+    updateSummary();
+    saveState();
+}
+
+function resetCoefficients() {
+    state.coefficients = { ...DEFAULT_COEFFICIENTS };
+    applySettingsToUI();
+    recalculateAll();
+    renderPlayers();
+    updateSummary();
+    saveState();
+    toast('↩️ Đã reset hệ số mặc định');
+}
+
+function applySettingsToUI() {
+    document.getElementById('coeffStNguoi').value = state.coefficients.stNguoi;
+    document.getElementById('coeffStTru').value = state.coefficients.stTru;
+    document.getElementById('coeffTriLieu').value = state.coefficients.triLieu;
+    document.getElementById('coeffDoDon').value = state.coefficients.doDon;
+    document.getElementById('coeffHoTro').value = state.coefficients.hoTro;
+    document.getElementById('coeffVatTu').value = state.coefficients.vatTu;
+    document.getElementById('coeffKda').value = state.coefficients.kda;
+    document.getElementById('threshS').value = state.thresholds.s;
+    document.getElementById('threshA').value = state.thresholds.a;
+    document.getElementById('threshB').value = state.thresholds.b;
+    document.getElementById('threshC').value = state.thresholds.c;
+    document.getElementById('benchmarkMode').value = state.benchmarkMode;
+    if (state.benchmarkMode === 'manual') {
+        document.getElementById('benchmarkManual').style.display = '';
+        document.getElementById('benchmarkManual').value = state.benchmarkManual;
+    }
+    renderSlots();
+}
+
+function saveSettings() {
+    state.coefficients = {
+        stNguoi: parseFloat(document.getElementById('coeffStNguoi').value) || 1,
+        stTru: parseFloat(document.getElementById('coeffStTru').value) || 0.4,
+        triLieu: parseFloat(document.getElementById('coeffTriLieu').value) || 0.6667,
+        doDon: parseFloat(document.getElementById('coeffDoDon').value) || 0.7619,
+        hoTro: parseFloat(document.getElementById('coeffHoTro').value) || 1,
+        vatTu: parseFloat(document.getElementById('coeffVatTu').value) || 0.3333,
+        kda: parseFloat(document.getElementById('coeffKda').value) || 4
+    };
+    state.thresholds = {
+        s: parseFloat(document.getElementById('threshS').value) || 120,
+        a: parseFloat(document.getElementById('threshA').value) || 100,
+        b: parseFloat(document.getElementById('threshB').value) || 80,
+        c: parseFloat(document.getElementById('threshC').value) || 60
+    };
+    recalculateAll();
+    renderPlayers();
+    updateSummary();
+    saveState();
+}
+
+// ═══════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════
+
+function exportResults() {
+    if (state.players.length === 0) {
+        toast('⚠️ Chưa có dữ liệu để xuất');
+        return;
+    }
+
+    const benchmark = getBenchmark();
+    const sorted = [...state.players].sort((a, b) => b.result.finalScore - a.result.finalScore);
+
+    let text = `⚔️ KẾT QUẢ BANG CHIẾN — ${new Date().toLocaleDateString('vi-VN')}\n`;
+    text += `📏 Mốc chuẩn: ${formatNumber(benchmark)}\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+
+    sorted.forEach((p, idx) => {
+        const tier = getTier(p.result.finalScore, benchmark);
+        const pctStr = tier.pct !== undefined ? ` (${Math.round(tier.pct)}%)` : '';
+        const tierEmoji = { S: '🟢', A: '🔵', B: '🟡', C: '🟠', D: '🔴' }[tier.tier] || '⚪';
+        text += `${idx + 1}. ${tierEmoji} [${tier.tier}] ${p.name} — ${formatNumber(p.result.finalScore)}${pctStr}\n`;
+    });
+
+    text += `━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `Tổng: ${state.players.length} thành viên`;
+
+    navigator.clipboard.writeText(text).then(() => {
+        toast('📋 Đã copy kết quả vào clipboard!');
+    }).catch(() => {
+        // Fallback
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        toast('📋 Đã copy kết quả!');
+    });
+}
+
+// ═══════════════════════════════════════════════
+// IMPORT / EXPORT JSON
+// ═══════════════════════════════════════════════
+
+function openImportModal() {
+    document.getElementById('importTextarea').value = '';
+    document.getElementById('importModal').classList.add('active');
+}
+
+function closeImportModal() {
+    document.getElementById('importModal').classList.remove('active');
+}
+
+function exportJSON() {
+    const data = state.players.map(p => ({
+        name: p.name,
+        monPhai: p.monPhai || null,
+        stNguoi: p.stats.stNguoi || 0,
+        stTru: p.stats.stTru || 0,
+        triLieu: p.stats.triLieu || 0,
+        doDon: p.stats.doDon || 0,
+        hoTro: p.stats.hoTro || 0,
+        vatTu: p.stats.vatTu || 0,
+        giet: p.stats.giet || 0,
+        hoiSinh: p.stats.hoiSinh || 0,
+        chet: p.stats.chet || 0,
+        activeSlots: p.activeSlots || []
+    }));
+    const json = JSON.stringify(data, null, 2);
+    navigator.clipboard.writeText(json).then(() => {
+        toast('💾 Đã copy JSON (' + data.length + ' players) vào clipboard!');
+    }).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = json; document.body.appendChild(ta);
+        ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta);
+        toast('💾 Đã copy JSON!');
+    });
+}
+
+function doImport(mode) {
+    const raw = document.getElementById('importTextarea').value.trim();
+    if (!raw) { toast('⚠️ Chưa có dữ liệu'); return; }
+
+    let data;
+    try {
+        data = JSON.parse(raw);
+    } catch (e) {
+        toast('❌ JSON không hợp lệ: ' + e.message);
+        return;
+    }
+
+    if (!Array.isArray(data)) {
+        toast('❌ Data phải là mảng JSON []');
+        return;
+    }
+
+    if (mode === 'replace') {
+        state.players = [];
+    }
+
+    let added = 0, updated = 0;
+    data.forEach(item => {
+        if (!item.name) return;
+        const stats = {
+            stNguoi: item.stNguoi || 0,
+            stTru: item.stTru || 0,
+            triLieu: item.triLieu || 0,
+            doDon: item.doDon || 0,
+            hoTro: item.hoTro || 0,
+            vatTu: item.vatTu || 0,
+            giet: item.giet || 0,
+            hoiSinh: item.hoiSinh || 0,
+            chet: item.chet || 0
+        };
+        const activeSlots = item.activeSlots || [];
+        const monPhai = item.monPhai || null;
+
+        // Find existing by name (case-insensitive)
+        const existing = state.players.find(p => p.name.toLowerCase() === item.name.toLowerCase());
+
+        if (existing && mode === 'merge') {
+            // Merge: update non-zero values only
+            Object.keys(stats).forEach(key => {
+                if (stats[key] !== 0) {
+                    existing.stats[key] = stats[key];
+                }
+            });
+            if (activeSlots.length > 0) existing.activeSlots = activeSlots;
+            if (monPhai) existing.monPhai = monPhai;
+            existing.result = calculateScore(existing.stats, existing.activeSlots);
+            updated++;
+        } else if (!existing) {
+            const result = calculateScore(stats, activeSlots);
+            state.players.push({
+                id: state.nextId++,
+                name: item.name,
+                monPhai,
+                stats,
+                activeSlots,
+                result
+            });
+            added++;
+        }
+    });
+
+    recalculateAll();
+    renderPlayers();
+    updateSummary();
+    saveState();
+    closeImportModal();
+    toast(`✅ Import xong: ${added} thêm mới, ${updated} cập nhật`);
+}
+
+// ═══════════════════════════════════════════════
+// PERSISTENCE
+// ═══════════════════════════════════════════════
+
+function saveState() {
+    try {
+        localStorage.setItem('bangChienStats', JSON.stringify(state));
+    } catch (e) {
+        console.warn('Could not save state:', e);
+    }
+}
+
+function loadState() {
+    try {
+        const saved = localStorage.getItem('bangChienStats');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            state = {
+                ...state,
+                ...parsed,
+                coefficients: { ...DEFAULT_COEFFICIENTS, ...parsed.coefficients },
+                thresholds: { ...DEFAULT_THRESHOLDS, ...parsed.thresholds }
+            };
+            // Ensure slots exist
+            if (!state.slots || state.slots.length === 0) {
+                state.slots = JSON.parse(JSON.stringify(DEFAULT_SLOTS));
+            }
+            // Ensure seasons exist
+            if (!state.seasons) state.seasons = [];
+        }
+    } catch (e) {
+        console.warn('Could not load state:', e);
+    }
+}
+
+// ═══════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════
+
+function formatNumber(n) {
+    return Math.round(n).toLocaleString('vi-VN');
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function toast(msg) {
+    const container = document.getElementById('toastContainer');
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = msg;
+    container.appendChild(el);
+    setTimeout(() => el.remove(), 3000);
+}
+
+// ═══════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════
+init();
+</script>
+
+</body>
+</html>
