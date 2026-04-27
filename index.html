@@ -1615,14 +1615,17 @@
         .season-tag .season-delete:hover { opacity: 1; color: var(--tier-d); }
 
         .season-tag .season-load {
-            font-size: 0.7rem;
-            opacity: 0.6;
+            font-size: 0.85rem;
+            opacity: 0.7;
             cursor: pointer;
-            margin-left: 2px;
+            margin-left: 4px;
+            padding: 2px 6px;
+            border-radius: 4px;
             transition: var(--transition);
+            background: rgba(74, 222, 128, 0.1);
         }
 
-        .season-tag .season-load:hover { opacity: 1; color: #4ade80; }
+        .season-tag .season-load:hover { opacity: 1; color: #4ade80; background: rgba(74, 222, 128, 0.25); }
 
         .trend-up { color: #4ade80; }
         .trend-down { color: #ff6b6b; }
@@ -1959,6 +1962,7 @@
                 <div class="ba-select-bar">
                     <button class="ba-link" onclick="baSelectAll()">Chọn tất cả</button>
                     <button class="ba-link" onclick="baSelectNone()">Bỏ chọn</button>
+                    <input type="text" id="baSearchInput" placeholder="🔍 Tìm theo tên..." oninput="filterBatchPlayers()" style="flex:1;padding:5px 10px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text-primary);font-size:0.82rem;outline:none;min-width:120px;">
                     <span id="baSelectedCount">0 đã chọn</span>
                 </div>
 
@@ -2963,7 +2967,7 @@ function renderSeasons() {
             <span class="season-tag" title="${s.players.length} người — ${new Date(s.date).toLocaleDateString('vi-VN')}">
                 📅 ${escapeHtml(s.name)} (${s.players.length})
                 ${loadBtn}
-                <span class="season-delete" onclick="event.stopPropagation(); deleteSeason(${idx})">✕</span>
+                <span class="season-delete" onclick="event.stopPropagation(); deleteSeason(${idx})" title="Xóa kỳ này">✕</span>
             </span>`;
     }).join('');
 }
@@ -3108,6 +3112,14 @@ function updateBaCount() {
     const count = document.querySelectorAll('#baPlayerList input[type="checkbox"]:checked').length;
     const el = document.getElementById('baSelectedCount');
     if (el) el.textContent = count + ' đã chọn';
+}
+
+function filterBatchPlayers() {
+    const query = (document.getElementById('baSearchInput')?.value || '').trim().toLowerCase();
+    document.querySelectorAll('#baPlayerList .ba-player-row').forEach(row => {
+        const name = row.querySelector('.ba-player-name')?.textContent?.toLowerCase() || '';
+        row.style.display = (!query || name.includes(query)) ? '' : 'none';
+    });
 }
 
 function batchAssignRoles() {
