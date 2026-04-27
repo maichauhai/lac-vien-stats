@@ -2164,15 +2164,20 @@
     <div class="modal" style="max-width:600px;">
         <h3>📥 Import dữ liệu</h3>
         <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:12px;">
-            Paste JSON data vào đây. Hỗ trợ 2 chế độ:
+            Chọn file JSON để import. Hỗ trợ 2 chế độ:
             <br>• <b>Thêm mới</b>: Thêm player chưa có, cập nhật chỉ số mới cho player đã có
             <br>• <b>Ghi đè</b>: Xóa hết rồi import lại
         </p>
-        <textarea id="importTextarea" style="width:100%;height:240px;padding:12px;background:var(--bg-input);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text-primary);font-family:monospace;font-size:0.82rem;resize:vertical;outline:none;" placeholder='Paste JSON array here...'></textarea>
+        <input type="file" id="importFileInput" accept=".json" style="display:none;" onchange="handleImportFile(this)">
+        <div id="importDropZone" onclick="document.getElementById('importFileInput').click()" style="width:100%;min-height:160px;padding:32px 24px;background:var(--bg-input);border:2px dashed var(--border-subtle);border-radius:var(--radius-md);color:var(--text-muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;cursor:pointer;transition:var(--transition);text-align:center;">
+            <span style="font-size:2.4rem;">📂</span>
+            <span style="font-size:0.92rem;">Nhấn vào đây hoặc kéo thả file JSON</span>
+            <span id="importFileName" style="font-size:0.82rem;color:var(--accent-cyan);display:none;"></span>
+        </div>
         <div class="btn-group" style="justify-content:flex-end;margin-top:12px;">
             <button class="btn btn-secondary btn-sm" onclick="closeImportModal()">Hủy</button>
-            <button class="btn btn-secondary btn-sm" onclick="doImport('merge')">🔄 Merge (thêm/cập nhật)</button>
-            <button class="btn btn-primary btn-sm" onclick="doImport('replace')">📥 Ghi đè</button>
+            <button class="btn btn-secondary btn-sm" id="btnImportMerge" onclick="doImport('merge')" disabled style="opacity:0.5;">🔄 Merge (thêm/cập nhật)</button>
+            <button class="btn btn-primary btn-sm" id="btnImportReplace" onclick="doImport('replace')" disabled style="opacity:0.5;">📥 Ghi đè</button>
         </div>
     </div>
 </div>
@@ -3517,14 +3522,82 @@ function exportResults() {
 // IMPORT / EXPORT JSON
 // ═══════════════════════════════════════════════
 
+let _importFileData = null;
+
 function openImportModal() {
-    document.getElementById('importTextarea').value = '';
+    _importFileData = null;
+    document.getElementById('importFileInput').value = '';
+    const nameEl = document.getElementById('importFileName');
+    nameEl.style.display = 'none';
+    nameEl.textContent = '';
+    const dropZone = document.getElementById('importDropZone');
+    dropZone.style.borderColor = 'var(--border-subtle)';
+    dropZone.querySelector('span:first-child').textContent = '📂';
+    dropZone.querySelector('span:nth-child(2)').textContent = 'Nhấn vào đây hoặc kéo thả file JSON';
+    document.getElementById('btnImportMerge').disabled = true;
+    document.getElementById('btnImportMerge').style.opacity = '0.5';
+    document.getElementById('btnImportReplace').disabled = true;
+    document.getElementById('btnImportReplace').style.opacity = '0.5';
     document.getElementById('importModal').classList.add('active');
 }
 
 function closeImportModal() {
     document.getElementById('importModal').classList.remove('active');
+    _importFileData = null;
 }
+
+function handleImportFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    _readImportFile(file);
+}
+
+function _readImportFile(file) {
+    if (!file.name.endsWith('.json')) {
+        toast('⚠️ Chỉ hỗ trợ file .json');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        _importFileData = e.target.result;
+        const nameEl = document.getElementById('importFileName');
+        nameEl.textContent = '✅ ' + file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+        nameEl.style.display = 'block';
+        const dropZone = document.getElementById('importDropZone');
+        dropZone.style.borderColor = 'var(--accent-cyan)';
+        dropZone.querySelector('span:first-child').textContent = '✅';
+        dropZone.querySelector('span:nth-child(2)').textContent = file.name;
+        document.getElementById('btnImportMerge').disabled = false;
+        document.getElementById('btnImportMerge').style.opacity = '1';
+        document.getElementById('btnImportReplace').disabled = false;
+        document.getElementById('btnImportReplace').style.opacity = '1';
+    };
+    reader.readAsText(file);
+}
+
+// Drag & drop support
+document.addEventListener('DOMContentLoaded', () => {
+    const dropZone = document.getElementById('importDropZone');
+    if (!dropZone) return;
+    ['dragenter','dragover'].forEach(evt => {
+        dropZone.addEventListener(evt, e => {
+            e.preventDefault(); e.stopPropagation();
+            dropZone.style.borderColor = 'var(--accent-cyan)';
+            dropZone.style.background = 'rgba(0,212,255,0.05)';
+        });
+    });
+    ['dragleave','drop'].forEach(evt => {
+        dropZone.addEventListener(evt, e => {
+            e.preventDefault(); e.stopPropagation();
+            dropZone.style.borderColor = 'var(--border-subtle)';
+            dropZone.style.background = 'var(--bg-input)';
+        });
+    });
+    dropZone.addEventListener('drop', e => {
+        const file = e.dataTransfer.files[0];
+        if (file) _readImportFile(file);
+    });
+});
 
 function exportJSON() {
     const data = state.players.map(p => ({
@@ -3554,8 +3627,8 @@ function exportJSON() {
 }
 
 function doImport(mode) {
-    const raw = document.getElementById('importTextarea').value.trim();
-    if (!raw) { toast('⚠️ Chưa có dữ liệu'); return; }
+    const raw = (_importFileData || '').trim();
+    if (!raw) { toast('⚠️ Chưa chọn file'); return; }
 
     let data;
     try {
