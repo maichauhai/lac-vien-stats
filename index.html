@@ -1708,6 +1708,8 @@
         .sort-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.06); }
         .sort-btn.active { color: var(--accent-cyan); border-color: rgba(0,212,255,0.3); background: rgba(0,212,255,0.08); }
     </style>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -2191,6 +2193,22 @@
 
 <script>
 // ═══════════════════════════════════════════════
+// FIREBASE CONFIG
+// ═══════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyBpGeAlMcZtGTkt8JfuPSofArtTkx_XlJE",
+    authDomain: "monstea-pos.firebaseapp.com",
+    databaseURL: "https://monstea-pos-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "monstea-pos",
+    storageBucket: "monstea-pos.firebasestorage.app",
+    messagingSenderId: "742890598182",
+    appId: "1:742890598182:web:ce67a7db065fe94b845be7"
+};
+let firebaseDb = null;
+let firebaseReady = false;
+let isRemoteUpdate = false;
+let fbSaveTimer = null;
+// ═══════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════
 
@@ -2235,7 +2253,6 @@ let lbSortKey = 'finalScore';
 // ═══════════════════════════════════════════════
 
 function init() {
-    loadState();
     renderSlots();
     renderMultiplierChecks();
     renderPlayers();
@@ -2249,6 +2266,114 @@ function init() {
     applySettingsToUI();
     setupTabs();
     setupEnterKey();
+}
+
+// ═══════════════════════════════════════════════
+// FIREBASE SYNC
+// ═══════════════════════════════════════════════
+
+function initFirebase() {
+    try {
+        const app = firebase.initializeApp(FIREBASE_CONFIG, 'lacVienStats');
+        firebaseDb = firebase.database(app);
+        const ref = firebaseDb.ref('lac-vien-stats');
+        let firstLoad = true;
+        ref.on('value', (snap) => {
+            const r = snap.val();
+            if (firstLoad) {
+                firstLoad = false;
+                if (r) {
+                    mergeFirebaseState(r);
+                    toast('☁️ Đã tải dữ liệu từ cloud');
+                } else {
+                    loadState();
+                    if (state.players.length > 0) {
+                        firebaseReady = true;
+                        saveState();
+                        toast('☁️ Đẩy dữ liệu local lên cloud');
+                    }
+                }
+                firebaseReady = true;
+                init();
+                return;
+            }
+            if (isRemoteUpdate) { isRemoteUpdate = false; return; }
+            if (r) {
+                mergeFirebaseState(r);
+                init();
+            }
+        });
+    } catch(e) {
+        console.warn('Firebase init failed:', e);
+        loadState();
+        init();
+    }
+}
+
+function mergeFirebaseState(r) {
+    // Snapshot local arrays before merge
+    const localPlayers = JSON.parse(JSON.stringify(state.players || []));
+    const localProfiles = JSON.parse(JSON.stringify(state.profiles || []));
+    const localSeasons = JSON.parse(JSON.stringify(state.seasons || []));
+
+    // Merge (remote overwrites)
+    state = {
+        ...state,
+        ...r,
+        coefficients: { ...DEFAULT_COEFFICIENTS, ...(r.coefficients || {}) },
+        thresholds: { ...DEFAULT_THRESHOLDS, ...(r.thresholds || {}) }
+    };
+
+    // Union merge players by id
+    if (localPlayers.length || (r.players && r.players.length)) {
+        const map = new Map();
+        const remotePlayers = r.players || [];
+        remotePlayers.forEach(p => map.set(p.id, p));
+        localPlayers.forEach(p => { if (!map.has(p.id)) map.set(p.id, p); });
+        state.players = Array.from(map.values());
+    }
+
+    // Union merge profiles by id
+    if (localProfiles.length || (r.profiles && r.profiles.length)) {
+        const map = new Map();
+        const remoteProfiles = r.profiles || [];
+        remoteProfiles.forEach(p => map.set(p.id, p));
+        localProfiles.forEach(p => { if (!map.has(p.id)) map.set(p.id, p); });
+        state.profiles = Array.from(map.values());
+    }
+
+    // Union merge seasons by id
+    if (localSeasons.length || (r.seasons && r.seasons.length)) {
+        const map = new Map();
+        const remoteSeasons = r.seasons || [];
+        remoteSeasons.forEach(s => map.set(s.id, s));
+        localSeasons.forEach(s => { if (!map.has(s.id)) map.set(s.id, s); });
+        state.seasons = Array.from(map.values());
+    }
+
+    // Ensure slots exist
+    if (!state.slots || state.slots.length === 0) {
+        state.slots = JSON.parse(JSON.stringify(DEFAULT_SLOTS));
+    }
+
+    // Recalculate nextId
+    const maxId = state.players.reduce((m, p) => Math.max(m, p.id || 0), 0);
+    if (state.nextId <= maxId) state.nextId = maxId + 1;
+
+    // Save merged state to localStorage
+    try { localStorage.setItem('bangChienStats', JSON.stringify(state)); } catch(e) {}
+}
+
+function saveStateToFirebase() {
+    if (!firebaseReady || !firebaseDb) return;
+    clearTimeout(fbSaveTimer);
+    fbSaveTimer = setTimeout(() => {
+        isRemoteUpdate = true;
+        firebaseDb.ref('lac-vien-stats').set(state).catch(e => {
+            console.warn('Firebase save error:', e);
+            isRemoteUpdate = false;
+        });
+    }, 500);
 }
 
 function setupTabs() {
@@ -3729,6 +3854,7 @@ function saveState() {
     } catch (e) {
         console.warn('Could not save state:', e);
     }
+    saveStateToFirebase();
 }
 
 function loadState() {
@@ -3780,7 +3906,9 @@ function toast(msg) {
 // ═══════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════
-init();
+// Boot: try Firebase first, fallback to localStorage
+loadState();
+initFirebase();
 </script>
 
 </body>
