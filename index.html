@@ -2206,7 +2206,7 @@ const FIREBASE_CONFIG = {
 };
 let firebaseDb = null;
 let firebaseReady = false;
-let isRemoteUpdate = false;
+let isRemoteUpdate = 0; // Counter: how many saves are pending (0 = no pending writes)
 let fbSaveTimer = null;
 // ═══════════════════════════════════════════════
 // STATE
@@ -2297,7 +2297,7 @@ function initFirebase() {
                 init();
                 return;
             }
-            if (isRemoteUpdate) { isRemoteUpdate = false; return; }
+            if (isRemoteUpdate > 0) { isRemoteUpdate--; return; }
             if (r) {
                 mergeFirebaseState(r);
                 init();
@@ -2368,10 +2368,14 @@ function saveStateToFirebase() {
     if (!firebaseReady || !firebaseDb) return;
     clearTimeout(fbSaveTimer);
     fbSaveTimer = setTimeout(() => {
-        isRemoteUpdate = true;
-        firebaseDb.ref('lac-vien-stats').set(state).catch(e => {
+        isRemoteUpdate++;
+        firebaseDb.ref('lac-vien-stats').set(state).then(() => {
+            // isRemoteUpdate will be decremented by the onValue listener
+            // If onValue doesn't fire within 3s, force reset to prevent stuck counter
+            setTimeout(() => { if (isRemoteUpdate > 0) isRemoteUpdate--; }, 3000);
+        }).catch(e => {
             console.warn('Firebase save error:', e);
-            isRemoteUpdate = false;
+            if (isRemoteUpdate > 0) isRemoteUpdate--;
         });
     }, 500);
 }
