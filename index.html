@@ -1708,8 +1708,6 @@
         .sort-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.06); }
         .sort-btn.active { color: var(--accent-cyan); border-color: rgba(0,212,255,0.3); background: rgba(0,212,255,0.08); }
     </style>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -2193,23 +2191,6 @@
 
 <script>
 // ═══════════════════════════════════════════════
-// FIREBASE CONFIG
-// ═══════════════════════════════════════════════
-const FIREBASE_CONFIG = {
-    apiKey: "AIzaSyBpGeAlMcZtGTkt8JfuPSofArtTkx_XlJE",
-    authDomain: "monstea-pos.firebaseapp.com",
-    databaseURL: "https://monstea-pos-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "monstea-pos",
-    storageBucket: "monstea-pos.firebasestorage.app",
-    messagingSenderId: "742890598182",
-    appId: "1:742890598182:web:ce67a7db065fe94b845be7"
-};
-let firebaseDb = null;
-let firebaseReady = false;
-let isRemoteUpdate = 0; // Counter: how many saves are pending (0 = no pending writes)
-let fbSaveTimer = null;
-let isApplyingRemote = false;
-// ═══════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════
 
@@ -2244,124 +2225,17 @@ let state = {
     editingId: null,
     nextId: 1,
     profiles: [],
-    seasons: [],
-    deletedPlayerIds: [],
-    deletedProfileIds: [],
-    deletedSeasonIds: [],
-    updatedAt: 0,
-    updatedBy: null
+    seasons: []
 };
 
 let lbSortKey = 'finalScore';
-const CLIENT_ID = getClientId();
-
-function getClientId() {
-    try {
-        const key = 'lacVienStatsClientId';
-        let id = localStorage.getItem(key);
-        if (!id) {
-            id = 'c-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
-            localStorage.setItem(key, id);
-        }
-        return id;
-    } catch(e) {
-        return 'c-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
-    }
-}
-
-function nowStamp() {
-    return Date.now();
-}
-
-function newEntityId() {
-    return Date.now() * 1000 + Math.floor(Math.random() * 1000);
-}
-
-function touchEntity(entity, stamp = nowStamp()) {
-    entity.updatedAt = stamp;
-    entity.updatedBy = CLIENT_ID;
-    return entity;
-}
-
-function tombstone(listName, id) {
-    if (id === undefined || id === null) return;
-    if (!state[listName]) state[listName] = [];
-    const key = String(id);
-    if (!state[listName].some(x => String(x) === key)) state[listName].push(id);
-}
-
-function getEntityStamp(item) {
-    if (!item) return 0;
-    const stamp = Number(item.updatedAt || 0);
-    if (stamp) return stamp;
-    if (item.date) return new Date(item.date).getTime() || 0;
-    return 0;
-}
-
-function normalizeEntities(list, idPrefix) {
-    if (!Array.isArray(list)) return [];
-    return list.map((item, idx) => {
-        if (!item || typeof item !== 'object') return item;
-        if (item.id === undefined || item.id === null) {
-            const legacyKey = item.name || item.date || `${idPrefix}-${idx}`;
-            return { ...item, id: `legacy-${idx}-${legacyKey}` };
-        }
-        return item;
-    });
-}
-
-function mergeById(remoteList, localList, deletedIds = []) {
-    const deleted = new Set((deletedIds || []).map(id => String(id)));
-    const map = new Map();
-    [...normalizeEntities(remoteList, 'r'), ...normalizeEntities(localList, 'l')].forEach(item => {
-        if (!item || item.id === undefined || item.id === null) return;
-        const key = String(item.id);
-        if (deleted.has(key)) return;
-        const current = map.get(key);
-        if (!current || getEntityStamp(item) > getEntityStamp(current)) {
-            map.set(key, item);
-        }
-    });
-    return Array.from(map.values());
-}
-
-function mergeDeletedIds(remoteState = {}, localState = {}) {
-    const merge = (a, b) => [...new Set([...(a || []), ...(b || [])].map(id => String(id)))];
-    return {
-        deletedPlayerIds: merge(remoteState.deletedPlayerIds, localState.deletedPlayerIds),
-        deletedProfileIds: merge(remoteState.deletedProfileIds, localState.deletedProfileIds),
-        deletedSeasonIds: merge(remoteState.deletedSeasonIds, localState.deletedSeasonIds)
-    };
-}
-
-function mergeStatePayload(remoteState = {}, localState = state) {
-    const deleted = mergeDeletedIds(remoteState, localState);
-    const remoteUpdated = Number(remoteState.updatedAt || 0);
-    const localUpdated = Number(localState.updatedAt || 0);
-    const base = remoteUpdated > localUpdated ? remoteState : localState;
-    return {
-        ...state,
-        ...remoteState,
-        ...localState,
-        coefficients: { ...DEFAULT_COEFFICIENTS, ...(remoteState.coefficients || {}), ...(localState.coefficients || {}) },
-        thresholds: { ...DEFAULT_THRESHOLDS, ...(remoteState.thresholds || {}), ...(localState.thresholds || {}) },
-        slots: localUpdated >= remoteUpdated ? (localState.slots || DEFAULT_SLOTS) : (remoteState.slots || localState.slots || DEFAULT_SLOTS),
-        benchmarkMode: base.benchmarkMode || 'auto',
-        benchmarkManual: base.benchmarkManual || 0,
-        ...deleted,
-        players: mergeById(remoteState.players, localState.players, deleted.deletedPlayerIds),
-        profiles: mergeById(remoteState.profiles, localState.profiles, deleted.deletedProfileIds),
-        seasons: mergeById(remoteState.seasons, localState.seasons, deleted.deletedSeasonIds),
-        updatedAt: Math.max(remoteUpdated, localUpdated),
-        updatedBy: localUpdated >= remoteUpdated ? localState.updatedBy : remoteState.updatedBy
-    };
-}
 
 // ═══════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════
 
 function init() {
+    loadState();
     renderSlots();
     renderMultiplierChecks();
     renderPlayers();
@@ -2375,87 +2249,6 @@ function init() {
     applySettingsToUI();
     setupTabs();
     setupEnterKey();
-}
-
-// ═══════════════════════════════════════════════
-// FIREBASE SYNC
-// ═══════════════════════════════════════════════
-
-function initFirebase() {
-    try {
-        const app = firebase.initializeApp(FIREBASE_CONFIG, 'lacVienStats');
-        firebaseDb = firebase.database(app);
-        const ref = firebaseDb.ref('lac-vien-stats');
-        let firstLoad = true;
-        ref.on('value', (snap) => {
-            const r = snap.val();
-            if (firstLoad) {
-                firstLoad = false;
-                if (r) {
-                    isApplyingRemote = true;
-                    mergeFirebaseState(r);
-                    isApplyingRemote = false;
-                    toast('☁️ Đã tải dữ liệu từ cloud');
-                } else {
-                    loadState();
-                    if (state.players.length > 0) {
-                        firebaseReady = true;
-                        saveState();
-                        toast('☁️ Đẩy dữ liệu local lên cloud');
-                    }
-                }
-                firebaseReady = true;
-                init();
-                return;
-            }
-            const ownWriteEcho = isRemoteUpdate > 0;
-            if (ownWriteEcho) isRemoteUpdate--;
-            if (r) {
-                isApplyingRemote = true;
-                mergeFirebaseState(r);
-                isApplyingRemote = false;
-                init();
-            }
-        });
-    } catch(e) {
-        console.warn('Firebase init failed:', e);
-        loadState();
-        init();
-    }
-}
-
-function mergeFirebaseState(r) {
-    state = mergeStatePayload(r || {}, state);
-
-    // Ensure slots exist
-    if (!state.slots || state.slots.length === 0) {
-        state.slots = JSON.parse(JSON.stringify(DEFAULT_SLOTS));
-    }
-
-    // Recalculate nextId
-    const maxId = state.players.reduce((m, p) => Math.max(m, p.id || 0), 0);
-    if (state.nextId <= maxId) state.nextId = maxId + 1;
-
-    // Save merged state to localStorage
-    try { localStorage.setItem('bangChienStats', JSON.stringify(state)); } catch(e) {}
-}
-
-function saveStateToFirebase() {
-    if (!firebaseReady || !firebaseDb || isApplyingRemote) return;
-    clearTimeout(fbSaveTimer);
-    fbSaveTimer = setTimeout(() => {
-        isRemoteUpdate++;
-        firebaseDb.ref('lac-vien-stats').transaction(remote => {
-            return mergeStatePayload(remote || {}, state);
-        }).then(() => {
-            // isRemoteUpdate will be decremented by the onValue listener
-            // If onValue doesn't fire within 3s, force reset to prevent stuck counter
-            setTimeout(() => { if (isRemoteUpdate > 0) isRemoteUpdate--; }, 3000);
-        }).catch(e => {
-            console.warn('Firebase save error:', e);
-            if (isRemoteUpdate > 0) isRemoteUpdate--;
-        });
-    }, 500);
 }
 
 function setupTabs() {
@@ -2592,7 +2385,6 @@ function addOrUpdatePlayer() {
                 activeSlots: data.activeSlots,
                 result
             };
-            touchEntity(state.players[idx]);
         }
         state.editingId = null;
         document.getElementById('btnAdd').innerHTML = '➕ THÊM';
@@ -2601,13 +2393,11 @@ function addOrUpdatePlayer() {
     } else {
         // Add new
         state.players.push({
-            id: newEntityId(),
+            id: state.nextId++,
             name: data.name,
             stats: data.stats,
             activeSlots: data.activeSlots,
-            result,
-            updatedAt: nowStamp(),
-            updatedBy: CLIENT_ID
+            result
         });
         toast('✅ Đã thêm ' + data.name);
     }
@@ -2658,7 +2448,6 @@ function editPlayer(id) {
 function deletePlayer(id) {
     const player = state.players.find(p => p.id === id);
     state.players = state.players.filter(p => p.id !== id);
-    tombstone('deletedPlayerIds', id);
     if (state.editingId === id) {
         state.editingId = null;
         clearForm();
@@ -2690,7 +2479,6 @@ function clearForm() {
 function clearAllPlayers() {
     if (state.players.length === 0) return;
     if (!confirm('Xóa tất cả ' + state.players.length + ' thành viên?')) return;
-    state.players.forEach(p => tombstone('deletedPlayerIds', p.id));
     state.players = [];
     state.editingId = null;
     clearForm();
@@ -3103,12 +2891,9 @@ function saveSeason() {
     }));
 
     state.seasons.push({
-        id: newEntityId(),
         name,
         date: new Date().toISOString(),
-        players: snapshot,
-        updatedAt: nowStamp(),
-        updatedBy: CLIENT_ID
+        players: snapshot
     });
 
     if (nameInput) nameInput.value = '';
@@ -3140,14 +2925,12 @@ function loadSeason(idx) {
     try {
         // Khôi phục players từ snapshot (KHÔNG dùng confirm để tránh bị block)
         state.players = season.players.map((p, i) => ({
-            id: newEntityId() + i,
+            id: i + 1,
             name: p.name,
             monPhai: p.monPhai || null,
             stats: { ...p.stats },
             activeSlots: [...(p.activeSlots || [])],
-            result: calculateScore(p.stats, p.activeSlots || []),
-            updatedAt: nowStamp(),
-            updatedBy: CLIENT_ID
+            result: calculateScore(p.stats, p.activeSlots || [])
         }));
         state.nextId = state.players.length + 1;
         state.editingId = null;
@@ -3172,7 +2955,6 @@ function loadSeason(idx) {
 function deleteSeason(idx) {
     if (!state.seasons || !state.seasons[idx]) return;
     const name = state.seasons[idx].name;
-    tombstone('deletedSeasonIds', state.seasons[idx].id);
     state.seasons.splice(idx, 1);
     saveState();
     renderSeasons();
@@ -3286,11 +3068,10 @@ function renderBatchAssign() {
     const sorted = [...state.players].sort((a, b) => b.result.finalScore - a.result.finalScore);
 
     playerList.innerHTML = sorted.map(p => {
-        const stateIndex = state.players.indexOf(p);
         const roles = (p.activeSlots || []).map(idx => state.slots[idx]?.name).filter(Boolean).join(', ');
         return `
-            <div class="ba-player-row" onclick="baTogglePlayer(this)">
-                <input type="checkbox" data-ba-player-index="${stateIndex}" data-ba-player="${escapeAttr(String(p.id))}" onclick="event.stopPropagation(); baSyncPlayerRow(this);">
+            <div class="ba-player-row" onclick="baTogglePlayer(this, ${p.id})">
+                <input type="checkbox" data-ba-player="${p.id}">
                 <span class="ba-player-name">${escapeHtml(p.name)}</span>
                 <span class="ba-player-roles">${roles ? escapeHtml(roles) : ''}</span>
             </div>`;
@@ -3311,15 +3092,10 @@ function renderBatchAssign() {
     updateBaCount();
 }
 
-function baTogglePlayer(row) {
+function baTogglePlayer(row, id) {
     const cb = row.querySelector('input[type="checkbox"]');
     cb.checked = !cb.checked;
     row.classList.toggle('selected', cb.checked);
-    updateBaCount();
-}
-
-function baSyncPlayerRow(cb) {
-    cb.closest('.ba-player-row')?.classList.toggle('selected', cb.checked);
     updateBaCount();
 }
 
@@ -3354,9 +3130,9 @@ function filterBatchPlayers() {
 }
 
 function batchAssignRoles() {
-    const selectedPlayerIndexes = [];
+    const selectedPlayerIds = [];
     document.querySelectorAll('#baPlayerList input[type="checkbox"]:checked').forEach(cb => {
-        selectedPlayerIndexes.push(parseInt(cb.dataset.baPlayerIndex, 10));
+        selectedPlayerIds.push(parseInt(cb.dataset.baPlayer));
     });
 
     const selectedRoleIndices = [];
@@ -3364,19 +3140,18 @@ function batchAssignRoles() {
         selectedRoleIndices.push(parseInt(cb.dataset.baRole));
     });
 
-    if (selectedPlayerIndexes.length === 0) { toast('⚠️ Chưa chọn người chơi'); return; }
+    if (selectedPlayerIds.length === 0) { toast('⚠️ Chưa chọn người chơi'); return; }
     if (selectedRoleIndices.length === 0) { toast('⚠️ Chưa chọn vai trò'); return; }
 
     let count = 0;
-    selectedPlayerIndexes.forEach(playerIndex => {
-        const player = state.players[playerIndex];
+    selectedPlayerIds.forEach(pid => {
+        const player = state.players.find(p => p.id === pid);
         if (player) {
             // Merge roles (add new, keep existing)
             const existing = new Set(player.activeSlots || []);
             selectedRoleIndices.forEach(idx => existing.add(idx));
             player.activeSlots = [...existing];
             player.result = calculateScore(player.stats, player.activeSlots);
-            touchEntity(player);
             count++;
         }
     });
@@ -3387,16 +3162,16 @@ function batchAssignRoles() {
     renderBatchAssign();
     updateSummary();
     saveState();
-    toast(count > 0 ? `⚡ Đã gán vai trò cho ${count} người` : '⚠️ Không tìm thấy người chơi đã chọn');
+    toast(`⚡ Đã gán vai trò cho ${count} người`);
 }
 
 function batchClearRoles() {
-    const selectedPlayerIndexes = [];
+    const selectedPlayerIds = [];
     document.querySelectorAll('#baPlayerList input[type="checkbox"]:checked').forEach(cb => {
-        selectedPlayerIndexes.push(parseInt(cb.dataset.baPlayerIndex, 10));
+        selectedPlayerIds.push(parseInt(cb.dataset.baPlayer));
     });
 
-    if (selectedPlayerIndexes.length === 0) { toast('⚠️ Chưa chọn người chơi'); return; }
+    if (selectedPlayerIds.length === 0) { toast('⚠️ Chưa chọn người chơi'); return; }
 
     const selectedRoleIndices = [];
     document.querySelectorAll('#baRolesGrid input[type="checkbox"]:checked').forEach(cb => {
@@ -3404,8 +3179,8 @@ function batchClearRoles() {
     });
 
     let count = 0;
-    selectedPlayerIndexes.forEach(playerIndex => {
-        const player = state.players[playerIndex];
+    selectedPlayerIds.forEach(pid => {
+        const player = state.players.find(p => p.id === pid);
         if (player) {
             if (selectedRoleIndices.length > 0) {
                 // Remove only selected roles
@@ -3415,7 +3190,6 @@ function batchClearRoles() {
                 player.activeSlots = [];
             }
             player.result = calculateScore(player.stats, player.activeSlots);
-            touchEntity(player);
             count++;
         }
     });
@@ -3476,10 +3250,9 @@ function saveProfile() {
     const existingIdx = state.profiles.findIndex(pr => pr.name.toLowerCase() === name.toLowerCase());
     if (existingIdx >= 0) {
         state.profiles[existingIdx].assignments = assignments;
-        touchEntity(state.profiles[existingIdx]);
         toast(`📋 Đã cập nhật đội hình "${name}"`);
     } else {
-        state.profiles.push({ id: newEntityId(), name, assignments, updatedAt: nowStamp(), updatedBy: CLIENT_ID });
+        state.profiles.push({ name, assignments });
         toast(`💾 Đã lưu đội hình "${name}" (${Object.keys(assignments).length} vai trò)`);
     }
 
@@ -3495,14 +3268,13 @@ function loadProfile(idx) {
     let matched = 0, notFound = [];
 
     // Clear all current roles first
-    state.players.forEach(p => { p.activeSlots = []; touchEntity(p); });
+    state.players.forEach(p => { p.activeSlots = []; });
 
     // Apply profile assignments
     Object.entries(profile.assignments).forEach(([playerName, slots]) => {
         const player = state.players.find(p => p.name.toLowerCase() === playerName.toLowerCase());
         if (player) {
             player.activeSlots = [...slots];
-            touchEntity(player);
             matched++;
         } else {
             notFound.push(playerName);
@@ -3512,7 +3284,6 @@ function loadProfile(idx) {
     // Recalculate
     state.players.forEach(p => {
         p.result = calculateScore(p.stats, p.activeSlots);
-        touchEntity(p);
     });
 
     recalculateAll();
@@ -3532,7 +3303,6 @@ function loadProfile(idx) {
 
 function deleteProfile(idx) {
     const name = state.profiles[idx]?.name || '';
-    tombstone('deletedProfileIds', state.profiles[idx]?.id);
     state.profiles.splice(idx, 1);
     saveState();
     renderProfiles();
@@ -3665,7 +3435,6 @@ function removeSlot(idx) {
         p.activeSlots = p.activeSlots
             .filter(i => i !== idx)
             .map(i => i > idx ? i - 1 : i);
-        touchEntity(p);
     });
     renderSlots();
     renderMultiplierChecks();
@@ -3894,7 +3663,6 @@ function doImport(mode) {
     }
 
     if (mode === 'replace') {
-        state.players.forEach(p => tombstone('deletedPlayerIds', p.id));
         state.players = [];
     }
 
@@ -3928,19 +3696,16 @@ function doImport(mode) {
             if (activeSlots.length > 0) existing.activeSlots = activeSlots;
             if (monPhai) existing.monPhai = monPhai;
             existing.result = calculateScore(existing.stats, existing.activeSlots);
-            touchEntity(existing);
             updated++;
         } else if (!existing) {
             const result = calculateScore(stats, activeSlots);
             state.players.push({
-                id: newEntityId(),
+                id: state.nextId++,
                 name: item.name,
                 monPhai,
                 stats,
                 activeSlots,
-                result,
-                updatedAt: nowStamp(),
-                updatedBy: CLIENT_ID
+                result
             });
             added++;
         }
@@ -3959,14 +3724,11 @@ function doImport(mode) {
 // ═══════════════════════════════════════════════
 
 function saveState() {
-    state.updatedAt = nowStamp();
-    state.updatedBy = CLIENT_ID;
     try {
         localStorage.setItem('bangChienStats', JSON.stringify(state));
     } catch (e) {
         console.warn('Could not save state:', e);
     }
-    saveStateToFirebase();
 }
 
 function loadState() {
@@ -3986,9 +3748,6 @@ function loadState() {
             }
             // Ensure seasons exist
             if (!state.seasons) state.seasons = [];
-            if (!state.deletedPlayerIds) state.deletedPlayerIds = [];
-            if (!state.deletedProfileIds) state.deletedProfileIds = [];
-            if (!state.deletedSeasonIds) state.deletedSeasonIds = [];
         }
     } catch (e) {
         console.warn('Could not load state:', e);
@@ -4009,10 +3768,6 @@ function escapeHtml(str) {
     return div.innerHTML;
 }
 
-function escapeAttr(str) {
-    return escapeHtml(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-
 function toast(msg) {
     const container = document.getElementById('toastContainer');
     const el = document.createElement('div');
@@ -4025,9 +3780,7 @@ function toast(msg) {
 // ═══════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════
-// Boot: try Firebase first, fallback to localStorage
-loadState();
-initFirebase();
+init();
 </script>
 
 </body>
