@@ -2255,6 +2255,8 @@ let state = {
 
 let lbSortKey = 'finalScore';
 const CLIENT_ID = getClientId();
+const baSelectedPlayerKeys = new Set();
+const baSelectedRoleIndexes = new Set();
 
 function getClientId() {
     try {
@@ -2342,6 +2344,10 @@ function markDeleted(listName, key) {
     if (!state[listName]) state[listName] = [];
     const strKey = String(key);
     if (!state[listName].map(String).includes(strKey)) state[listName].push(strKey);
+}
+
+function playerKey(player) {
+    return String(player?.id ?? player?.name ?? '');
 }
 
 // ═══════════════════════════════════════════════
@@ -3255,11 +3261,12 @@ function renderBatchAssign() {
     const sorted = [...state.players].sort((a, b) => b.result.finalScore - a.result.finalScore);
 
     playerList.innerHTML = sorted.map(p => {
-        const stateIndex = state.players.indexOf(p);
+        const key = playerKey(p);
+        const checked = baSelectedPlayerKeys.has(key);
         const roles = (p.activeSlots || []).map(idx => state.slots[idx]?.name).filter(Boolean).join(', ');
         return `
-            <div class="ba-player-row" onclick="baTogglePlayer(this)">
-                <input type="checkbox" data-ba-player-index="${stateIndex}" onclick="event.stopPropagation(); baSyncPlayerRow(this);">
+            <div class="ba-player-row ${checked ? 'selected' : ''}" data-ba-player-key="${escapeAttr(key)}" onclick="baTogglePlayer(this)">
+                <input type="checkbox" ${checked ? 'checked' : ''} onclick="event.stopPropagation(); baSyncPlayerRow(this);">
                 <span class="ba-player-name">${escapeHtml(p.name)}</span>
                 <span class="ba-player-roles">${roles ? escapeHtml(roles) : ''}</span>
             </div>`;
@@ -3271,7 +3278,7 @@ function renderBatchAssign() {
 
     rolesGrid.innerHTML = state.slots.map((slot, idx) => `
         <label class="ba-role-chip">
-            <input type="checkbox" data-ba-role="${idx}">
+            <input type="checkbox" data-ba-role="${idx}" ${baSelectedRoleIndexes.has(idx) ? 'checked' : ''} onchange="baSyncRole(this)">
             <span class="ba-role-name">${escapeHtml(slot.name)}</span>
             <span class="ba-role-value">+${slot.value}%</span>
         </label>
@@ -3281,26 +3288,43 @@ function renderBatchAssign() {
 }
 
 function baTogglePlayer(row) {
+    const key = row.dataset.baPlayerKey;
     const cb = row.querySelector('input[type="checkbox"]');
     cb.checked = !cb.checked;
+    if (cb.checked) baSelectedPlayerKeys.add(key);
+    else baSelectedPlayerKeys.delete(key);
     row.classList.toggle('selected', cb.checked);
     updateBaCount();
 }
 
 function baSyncPlayerRow(cb) {
-    cb.closest('.ba-player-row')?.classList.toggle('selected', cb.checked);
+    const row = cb.closest('.ba-player-row');
+    const key = row?.dataset.baPlayerKey;
+    if (cb.checked) baSelectedPlayerKeys.add(key);
+    else baSelectedPlayerKeys.delete(key);
+    row?.classList.toggle('selected', cb.checked);
     updateBaCount();
+}
+
+function baSyncRole(cb) {
+    const idx = parseInt(cb.dataset.baRole, 10);
+    if (Number.isNaN(idx)) return;
+    if (cb.checked) baSelectedRoleIndexes.add(idx);
+    else baSelectedRoleIndexes.delete(idx);
 }
 
 function baSelectAll() {
     document.querySelectorAll('#baPlayerList input[type="checkbox"]').forEach(cb => {
+        const key = cb.closest('.ba-player-row')?.dataset.baPlayerKey;
         cb.checked = true;
+        if (key) baSelectedPlayerKeys.add(key);
         cb.closest('.ba-player-row')?.classList.add('selected');
     });
     updateBaCount();
 }
 
 function baSelectNone() {
+    baSelectedPlayerKeys.clear();
     document.querySelectorAll('#baPlayerList input[type="checkbox"]').forEach(cb => {
         cb.checked = false;
         cb.closest('.ba-player-row')?.classList.remove('selected');
@@ -3309,9 +3333,8 @@ function baSelectNone() {
 }
 
 function updateBaCount() {
-    const count = document.querySelectorAll('#baPlayerList input[type="checkbox"]:checked').length;
     const el = document.getElementById('baSelectedCount');
-    if (el) el.textContent = count + ' đã chọn';
+    if (el) el.textContent = baSelectedPlayerKeys.size + ' đã chọn';
 }
 
 function filterBatchPlayers() {
@@ -3323,26 +3346,23 @@ function filterBatchPlayers() {
 }
 
 function batchAssignRoles() {
-    const selectedPlayerIndexes = [];
-    document.querySelectorAll('#baPlayerList input[type="checkbox"]:checked').forEach(cb => {
-        selectedPlayerIndexes.push(parseInt(cb.dataset.baPlayerIndex, 10));
-    });
-
-    const selectedRoleIndices = [];
+    document.querySelectorAll('#baRolesGrid input[type="checkbox"]:checked').forEach(cb => baSyncRole(cb));
+    const selectedRoleIndices = [...baSelectedRoleIndexes];
     document.querySelectorAll('#baRolesGrid input[type="checkbox"]:checked').forEach(cb => {
         selectedRoleIndices.push(parseInt(cb.dataset.baRole));
     });
+    const roleSet = [...new Set(selectedRoleIndices)].filter(idx => !Number.isNaN(idx));
 
-    if (selectedPlayerIndexes.length === 0) { toast('⚠️ Chưa chọn người chơi'); return; }
-    if (selectedRoleIndices.length === 0) { toast('⚠️ Chưa chọn vai trò'); return; }
+    if (baSelectedPlayerKeys.size === 0) { toast('⚠️ Chưa chọn người chơi'); return; }
+    if (roleSet.length === 0) { toast('⚠️ Chưa chọn vai trò'); return; }
 
     let count = 0;
-    selectedPlayerIndexes.forEach(playerIndex => {
-        const player = state.players[playerIndex];
+    state.players.forEach(player => {
+        if (!baSelectedPlayerKeys.has(playerKey(player))) return;
         if (player) {
             // Merge roles (add new, keep existing)
             const existing = new Set(player.activeSlots || []);
-            selectedRoleIndices.forEach(idx => existing.add(idx));
+            roleSet.forEach(idx => existing.add(idx));
             player.activeSlots = [...existing];
             player.result = calculateScore(player.stats, player.activeSlots);
             touchEntity(player);
@@ -3356,25 +3376,23 @@ function batchAssignRoles() {
     renderBatchAssign();
     updateSummary();
     saveState();
+    if (count > 0) {
+        baSelectedPlayerKeys.clear();
+        baSelectedRoleIndexes.clear();
+        renderBatchAssign();
+    }
     toast(count > 0 ? `⚡ Đã gán vai trò cho ${count} người` : '⚠️ Không tìm thấy người chơi đã chọn');
 }
 
 function batchClearRoles() {
-    const selectedPlayerIndexes = [];
-    document.querySelectorAll('#baPlayerList input[type="checkbox"]:checked').forEach(cb => {
-        selectedPlayerIndexes.push(parseInt(cb.dataset.baPlayerIndex, 10));
-    });
+    document.querySelectorAll('#baRolesGrid input[type="checkbox"]:checked').forEach(cb => baSyncRole(cb));
+    const selectedRoleIndices = [...baSelectedRoleIndexes];
 
-    if (selectedPlayerIndexes.length === 0) { toast('⚠️ Chưa chọn người chơi'); return; }
-
-    const selectedRoleIndices = [];
-    document.querySelectorAll('#baRolesGrid input[type="checkbox"]:checked').forEach(cb => {
-        selectedRoleIndices.push(parseInt(cb.dataset.baRole));
-    });
+    if (baSelectedPlayerKeys.size === 0) { toast('⚠️ Chưa chọn người chơi'); return; }
 
     let count = 0;
-    selectedPlayerIndexes.forEach(playerIndex => {
-        const player = state.players[playerIndex];
+    state.players.forEach(player => {
+        if (!baSelectedPlayerKeys.has(playerKey(player))) return;
         if (player) {
             if (selectedRoleIndices.length > 0) {
                 // Remove only selected roles
@@ -3395,6 +3413,11 @@ function batchClearRoles() {
     renderBatchAssign();
     updateSummary();
     saveState();
+    if (count > 0) {
+        baSelectedPlayerKeys.clear();
+        baSelectedRoleIndexes.clear();
+        renderBatchAssign();
+    }
     toast(`🗑️ Đã xóa vai trò của ${count} người`);
 }
 
@@ -3995,6 +4018,10 @@ function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+}
+
+function escapeAttr(str) {
+    return escapeHtml(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function toast(msg) {
