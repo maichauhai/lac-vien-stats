@@ -3286,10 +3286,11 @@ function renderBatchAssign() {
     const sorted = [...state.players].sort((a, b) => b.result.finalScore - a.result.finalScore);
 
     playerList.innerHTML = sorted.map(p => {
+        const stateIndex = state.players.indexOf(p);
         const roles = (p.activeSlots || []).map(idx => state.slots[idx]?.name).filter(Boolean).join(', ');
         return `
             <div class="ba-player-row" onclick="baTogglePlayer(this)">
-                <input type="checkbox" data-ba-player="${escapeAttr(String(p.id))}" onclick="event.stopPropagation(); baSyncPlayerRow(this);">
+                <input type="checkbox" data-ba-player-index="${stateIndex}" data-ba-player="${escapeAttr(String(p.id))}" onclick="event.stopPropagation(); baSyncPlayerRow(this);">
                 <span class="ba-player-name">${escapeHtml(p.name)}</span>
                 <span class="ba-player-roles">${roles ? escapeHtml(roles) : ''}</span>
             </div>`;
@@ -3353,9 +3354,9 @@ function filterBatchPlayers() {
 }
 
 function batchAssignRoles() {
-    const selectedPlayerIds = [];
+    const selectedPlayerIndexes = [];
     document.querySelectorAll('#baPlayerList input[type="checkbox"]:checked').forEach(cb => {
-        selectedPlayerIds.push(cb.dataset.baPlayer);
+        selectedPlayerIndexes.push(parseInt(cb.dataset.baPlayerIndex, 10));
     });
 
     const selectedRoleIndices = [];
@@ -3363,12 +3364,12 @@ function batchAssignRoles() {
         selectedRoleIndices.push(parseInt(cb.dataset.baRole));
     });
 
-    if (selectedPlayerIds.length === 0) { toast('⚠️ Chưa chọn người chơi'); return; }
+    if (selectedPlayerIndexes.length === 0) { toast('⚠️ Chưa chọn người chơi'); return; }
     if (selectedRoleIndices.length === 0) { toast('⚠️ Chưa chọn vai trò'); return; }
 
     let count = 0;
-    selectedPlayerIds.forEach(pid => {
-        const player = state.players.find(p => String(p.id) === pid);
+    selectedPlayerIndexes.forEach(playerIndex => {
+        const player = state.players[playerIndex];
         if (player) {
             // Merge roles (add new, keep existing)
             const existing = new Set(player.activeSlots || []);
@@ -3386,16 +3387,16 @@ function batchAssignRoles() {
     renderBatchAssign();
     updateSummary();
     saveState();
-    toast(`⚡ Đã gán vai trò cho ${count} người`);
+    toast(count > 0 ? `⚡ Đã gán vai trò cho ${count} người` : '⚠️ Không tìm thấy người chơi đã chọn');
 }
 
 function batchClearRoles() {
-    const selectedPlayerIds = [];
+    const selectedPlayerIndexes = [];
     document.querySelectorAll('#baPlayerList input[type="checkbox"]:checked').forEach(cb => {
-        selectedPlayerIds.push(cb.dataset.baPlayer);
+        selectedPlayerIndexes.push(parseInt(cb.dataset.baPlayerIndex, 10));
     });
 
-    if (selectedPlayerIds.length === 0) { toast('⚠️ Chưa chọn người chơi'); return; }
+    if (selectedPlayerIndexes.length === 0) { toast('⚠️ Chưa chọn người chơi'); return; }
 
     const selectedRoleIndices = [];
     document.querySelectorAll('#baRolesGrid input[type="checkbox"]:checked').forEach(cb => {
@@ -3403,8 +3404,8 @@ function batchClearRoles() {
     });
 
     let count = 0;
-    selectedPlayerIds.forEach(pid => {
-        const player = state.players.find(p => String(p.id) === pid);
+    selectedPlayerIndexes.forEach(playerIndex => {
+        const player = state.players[playerIndex];
         if (player) {
             if (selectedRoleIndices.length > 0) {
                 // Remove only selected roles
