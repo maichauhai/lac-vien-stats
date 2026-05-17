@@ -2457,7 +2457,7 @@ function setupEnterKey() {
 // SCORE CALCULATION
 // ═══════════════════════════════════════════════
 
-function calculateScore(stats, activeSlotIndices) {
+function calculateScore(stats = {}, activeSlotIndices = []) {
     const c = state.coefficients;
 
     const baseScore =
@@ -2471,7 +2471,7 @@ function calculateScore(stats, activeSlotIndices) {
 
     // Calculate additive special multiplier
     let bonusPercent = 0;
-    activeSlotIndices.forEach(idx => {
+    (activeSlotIndices || []).forEach(idx => {
         if (state.slots[idx]) {
             bonusPercent += state.slots[idx].value;
         }
@@ -2679,7 +2679,8 @@ function clearAllPlayers() {
 
 function recalculateAll() {
     state.players.forEach(p => {
-        p.result = calculateScore(p.stats, p.activeSlots);
+        if (!p.activeSlots) p.activeSlots = [];
+        p.result = calculateScore(p.stats || {}, p.activeSlots);
     });
     updateBenchmark();
 }
@@ -3994,6 +3995,11 @@ function ensureStateShape() {
     if (!state.deletedSeasonKeys) state.deletedSeasonKeys = [];
     const maxId = state.players.reduce((m, p) => Math.max(m, Number(p.id) || 0), 0);
     if (!state.nextId || state.nextId <= maxId) state.nextId = maxId + 1;
+    state.players.forEach(p => {
+        if (!p.stats) p.stats = {};
+        if (!p.activeSlots) p.activeSlots = [];
+        if (!p.result) p.result = calculateScore(p.stats, p.activeSlots);
+    });
 }
 
 function stampLegacyLocalState() {
