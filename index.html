@@ -1708,6 +1708,8 @@
         .sort-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.06); }
         .sort-btn.active { color: var(--accent-cyan); border-color: rgba(0,212,255,0.3); background: rgba(0,212,255,0.08); }
     </style>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -2191,6 +2193,24 @@
 
 <script>
 // ═══════════════════════════════════════════════
+// FIREBASE SYNC CONFIG
+// ═══════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyBpGeAlMcZtGTkt8JfuPSofArtTkx_XlJE",
+    authDomain: "monstea-pos.firebaseapp.com",
+    databaseURL: "https://monstea-pos-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "monstea-pos",
+    storageBucket: "monstea-pos.firebasestorage.app",
+    messagingSenderId: "742890598182",
+    appId: "1:742890598182:web:ce67a7db065fe94b845be7"
+};
+
+let firebaseDb = null;
+let firebaseReady = false;
+let fbSaveTimer = null;
+let applyingRemote = false;
+
+// ═══════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════
 
@@ -2225,10 +2245,104 @@ let state = {
     editingId: null,
     nextId: 1,
     profiles: [],
-    seasons: []
+    seasons: [],
+    deletedPlayerIds: [],
+    deletedProfileKeys: [],
+    deletedSeasonKeys: [],
+    _updatedAt: 0,
+    _updatedBy: null
 };
 
 let lbSortKey = 'finalScore';
+const CLIENT_ID = getClientId();
+
+function getClientId() {
+    try {
+        const key = 'lacVienStatsClientId';
+        let id = localStorage.getItem(key);
+        if (!id) {
+            id = 'c-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+            localStorage.setItem(key, id);
+        }
+        return id;
+    } catch(e) {
+        return 'c-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+    }
+}
+
+function nowStamp() {
+    return Date.now();
+}
+
+function touchEntity(item, stamp = nowStamp()) {
+    if (!item) return item;
+    item._updatedAt = stamp;
+    item._updatedBy = CLIENT_ID;
+    return item;
+}
+
+function entityStamp(item) {
+    return Number(item?._updatedAt || 0);
+}
+
+function mergeDeleted(remoteState = {}, localState = {}) {
+    const merge = (a, b) => [...new Set([...(a || []), ...(b || [])].map(String))];
+    return {
+        deletedPlayerIds: merge(remoteState.deletedPlayerIds, localState.deletedPlayerIds),
+        deletedProfileKeys: merge(remoteState.deletedProfileKeys, localState.deletedProfileKeys),
+        deletedSeasonKeys: merge(remoteState.deletedSeasonKeys, localState.deletedSeasonKeys)
+    };
+}
+
+function mergeEntityList(remoteList = [], localList = [], getKey, deletedKeys = []) {
+    const deleted = new Set((deletedKeys || []).map(String));
+    const map = new Map();
+    [...(remoteList || []), ...(localList || [])].forEach(item => {
+        if (!item || typeof item !== 'object') return;
+        const key = String(getKey(item));
+        if (!key || key === 'undefined' || deleted.has(key)) return;
+        const current = map.get(key);
+        if (!current || entityStamp(item) >= entityStamp(current)) map.set(key, item);
+    });
+    return Array.from(map.values());
+}
+
+function seasonKey(season) {
+    return season?.id ?? season?.date ?? season?.name;
+}
+
+function mergeStatePayload(remoteState = {}, localState = state) {
+    const remoteStamp = Number(remoteState._updatedAt || 0);
+    const localStamp = Number(localState._updatedAt || 0);
+    const newest = remoteStamp > localStamp ? remoteState : localState;
+    const deleted = remoteStamp > localStamp
+        ? mergeDeleted(remoteState, localState)
+        : mergeDeleted({}, localState);
+
+    return {
+        ...state,
+        ...remoteState,
+        ...localState,
+        coefficients: { ...DEFAULT_COEFFICIENTS, ...(newest.coefficients || {}) },
+        thresholds: { ...DEFAULT_THRESHOLDS, ...(newest.thresholds || {}) },
+        slots: newest.slots && newest.slots.length ? newest.slots : JSON.parse(JSON.stringify(DEFAULT_SLOTS)),
+        benchmarkMode: newest.benchmarkMode || 'auto',
+        benchmarkManual: newest.benchmarkManual || 0,
+        ...deleted,
+        players: mergeEntityList(remoteState.players, localState.players, p => p.id, deleted.deletedPlayerIds),
+        profiles: mergeEntityList(remoteState.profiles, localState.profiles, p => p.name, deleted.deletedProfileKeys),
+        seasons: mergeEntityList(remoteState.seasons, localState.seasons, seasonKey, deleted.deletedSeasonKeys),
+        _updatedAt: Math.max(remoteStamp, localStamp),
+        _updatedBy: localStamp >= remoteStamp ? localState._updatedBy : remoteState._updatedBy
+    };
+}
+
+function markDeleted(listName, key) {
+    if (key === undefined || key === null) return;
+    if (!state[listName]) state[listName] = [];
+    const strKey = String(key);
+    if (!state[listName].map(String).includes(strKey)) state[listName].push(strKey);
+}
 
 // ═══════════════════════════════════════════════
 // INIT
@@ -2236,6 +2350,17 @@ let lbSortKey = 'finalScore';
 
 function init() {
     loadState();
+    renderApp();
+    setupTabs();
+    setupEnterKey();
+    initFirebase();
+}
+
+function renderApp() {
+    ensureStateShape();
+    state.players.forEach(p => {
+        p.result = calculateScore(p.stats || {}, p.activeSlots || []);
+    });
     renderSlots();
     renderMultiplierChecks();
     renderPlayers();
@@ -2247,8 +2372,59 @@ function init() {
     renderAnomalies();
     updateSummary();
     applySettingsToUI();
-    setupTabs();
-    setupEnterKey();
+}
+
+function initFirebase() {
+    if (typeof firebase === 'undefined') {
+        toast('⚠️ Không tải được Firebase, đang dùng dữ liệu local');
+        return;
+    }
+    try {
+        const app = firebase.initializeApp(FIREBASE_CONFIG, 'lacVienStats');
+        firebaseDb = firebase.database(app);
+        const ref = firebaseDb.ref('lac-vien-stats');
+        let firstLoad = true;
+        ref.on('value', snap => {
+            const remote = snap.val();
+            if (firstLoad) {
+                firstLoad = false;
+                firebaseReady = true;
+                if (remote) {
+                    applyRemoteState(remote);
+                    if (state._updatedBy === CLIENT_ID) saveStateToFirebase();
+                    toast('☁️ Đã đồng bộ cloud');
+                } else if (state.players.length || state.profiles.length || state.seasons.length) {
+                    saveStateToFirebase();
+                    toast('☁️ Đã tạo dữ liệu cloud');
+                }
+                return;
+            }
+            if (!remote || remote._updatedBy === CLIENT_ID) return;
+            applyRemoteState(remote);
+            toast('☁️ Dữ liệu cloud vừa cập nhật');
+        });
+    } catch(e) {
+        console.warn('Firebase init failed:', e);
+        toast('⚠️ Firebase lỗi, đang dùng dữ liệu local');
+    }
+}
+
+function applyRemoteState(remote) {
+    applyingRemote = true;
+    state = mergeStatePayload(remote || {}, state);
+    ensureStateShape();
+    try { localStorage.setItem('bangChienStats', JSON.stringify(state)); } catch(e) {}
+    renderApp();
+    applyingRemote = false;
+}
+
+function saveStateToFirebase() {
+    if (!firebaseReady || !firebaseDb || applyingRemote) return;
+    clearTimeout(fbSaveTimer);
+    fbSaveTimer = setTimeout(() => {
+        firebaseDb.ref('lac-vien-stats').transaction(remote => mergeStatePayload(remote || {}, state))
+            .catch(e => console.warn('Firebase save error:', e));
+    }, 400);
 }
 
 function setupTabs() {
@@ -2385,6 +2561,7 @@ function addOrUpdatePlayer() {
                 activeSlots: data.activeSlots,
                 result
             };
+            touchEntity(state.players[idx]);
         }
         state.editingId = null;
         document.getElementById('btnAdd').innerHTML = '➕ THÊM';
@@ -2397,7 +2574,9 @@ function addOrUpdatePlayer() {
             name: data.name,
             stats: data.stats,
             activeSlots: data.activeSlots,
-            result
+            result,
+            _updatedAt: nowStamp(),
+            _updatedBy: CLIENT_ID
         });
         toast('✅ Đã thêm ' + data.name);
     }
@@ -2448,6 +2627,7 @@ function editPlayer(id) {
 function deletePlayer(id) {
     const player = state.players.find(p => p.id === id);
     state.players = state.players.filter(p => p.id !== id);
+    markDeleted('deletedPlayerIds', id);
     if (state.editingId === id) {
         state.editingId = null;
         clearForm();
@@ -2479,6 +2659,7 @@ function clearForm() {
 function clearAllPlayers() {
     if (state.players.length === 0) return;
     if (!confirm('Xóa tất cả ' + state.players.length + ' thành viên?')) return;
+    state.players.forEach(p => markDeleted('deletedPlayerIds', p.id));
     state.players = [];
     state.editingId = null;
     clearForm();
@@ -2891,9 +3072,12 @@ function saveSeason() {
     }));
 
     state.seasons.push({
+        id: 'season-' + Date.now().toString(36),
         name,
         date: new Date().toISOString(),
-        players: snapshot
+        players: snapshot,
+        _updatedAt: nowStamp(),
+        _updatedBy: CLIENT_ID
     });
 
     if (nameInput) nameInput.value = '';
@@ -2930,7 +3114,9 @@ function loadSeason(idx) {
             monPhai: p.monPhai || null,
             stats: { ...p.stats },
             activeSlots: [...(p.activeSlots || [])],
-            result: calculateScore(p.stats, p.activeSlots || [])
+            result: calculateScore(p.stats, p.activeSlots || []),
+            _updatedAt: nowStamp(),
+            _updatedBy: CLIENT_ID
         }));
         state.nextId = state.players.length + 1;
         state.editingId = null;
@@ -2955,6 +3141,7 @@ function loadSeason(idx) {
 function deleteSeason(idx) {
     if (!state.seasons || !state.seasons[idx]) return;
     const name = state.seasons[idx].name;
+    markDeleted('deletedSeasonKeys', seasonKey(state.seasons[idx]));
     state.seasons.splice(idx, 1);
     saveState();
     renderSeasons();
@@ -3068,10 +3255,11 @@ function renderBatchAssign() {
     const sorted = [...state.players].sort((a, b) => b.result.finalScore - a.result.finalScore);
 
     playerList.innerHTML = sorted.map(p => {
+        const stateIndex = state.players.indexOf(p);
         const roles = (p.activeSlots || []).map(idx => state.slots[idx]?.name).filter(Boolean).join(', ');
         return `
-            <div class="ba-player-row" onclick="baTogglePlayer(this, ${p.id})">
-                <input type="checkbox" data-ba-player="${p.id}">
+            <div class="ba-player-row" onclick="baTogglePlayer(this)">
+                <input type="checkbox" data-ba-player-index="${stateIndex}" onclick="event.stopPropagation(); baSyncPlayerRow(this);">
                 <span class="ba-player-name">${escapeHtml(p.name)}</span>
                 <span class="ba-player-roles">${roles ? escapeHtml(roles) : ''}</span>
             </div>`;
@@ -3092,10 +3280,15 @@ function renderBatchAssign() {
     updateBaCount();
 }
 
-function baTogglePlayer(row, id) {
+function baTogglePlayer(row) {
     const cb = row.querySelector('input[type="checkbox"]');
     cb.checked = !cb.checked;
     row.classList.toggle('selected', cb.checked);
+    updateBaCount();
+}
+
+function baSyncPlayerRow(cb) {
+    cb.closest('.ba-player-row')?.classList.toggle('selected', cb.checked);
     updateBaCount();
 }
 
@@ -3130,9 +3323,9 @@ function filterBatchPlayers() {
 }
 
 function batchAssignRoles() {
-    const selectedPlayerIds = [];
+    const selectedPlayerIndexes = [];
     document.querySelectorAll('#baPlayerList input[type="checkbox"]:checked').forEach(cb => {
-        selectedPlayerIds.push(parseInt(cb.dataset.baPlayer));
+        selectedPlayerIndexes.push(parseInt(cb.dataset.baPlayerIndex, 10));
     });
 
     const selectedRoleIndices = [];
@@ -3140,18 +3333,19 @@ function batchAssignRoles() {
         selectedRoleIndices.push(parseInt(cb.dataset.baRole));
     });
 
-    if (selectedPlayerIds.length === 0) { toast('⚠️ Chưa chọn người chơi'); return; }
+    if (selectedPlayerIndexes.length === 0) { toast('⚠️ Chưa chọn người chơi'); return; }
     if (selectedRoleIndices.length === 0) { toast('⚠️ Chưa chọn vai trò'); return; }
 
     let count = 0;
-    selectedPlayerIds.forEach(pid => {
-        const player = state.players.find(p => p.id === pid);
+    selectedPlayerIndexes.forEach(playerIndex => {
+        const player = state.players[playerIndex];
         if (player) {
             // Merge roles (add new, keep existing)
             const existing = new Set(player.activeSlots || []);
             selectedRoleIndices.forEach(idx => existing.add(idx));
             player.activeSlots = [...existing];
             player.result = calculateScore(player.stats, player.activeSlots);
+            touchEntity(player);
             count++;
         }
     });
@@ -3162,16 +3356,16 @@ function batchAssignRoles() {
     renderBatchAssign();
     updateSummary();
     saveState();
-    toast(`⚡ Đã gán vai trò cho ${count} người`);
+    toast(count > 0 ? `⚡ Đã gán vai trò cho ${count} người` : '⚠️ Không tìm thấy người chơi đã chọn');
 }
 
 function batchClearRoles() {
-    const selectedPlayerIds = [];
+    const selectedPlayerIndexes = [];
     document.querySelectorAll('#baPlayerList input[type="checkbox"]:checked').forEach(cb => {
-        selectedPlayerIds.push(parseInt(cb.dataset.baPlayer));
+        selectedPlayerIndexes.push(parseInt(cb.dataset.baPlayerIndex, 10));
     });
 
-    if (selectedPlayerIds.length === 0) { toast('⚠️ Chưa chọn người chơi'); return; }
+    if (selectedPlayerIndexes.length === 0) { toast('⚠️ Chưa chọn người chơi'); return; }
 
     const selectedRoleIndices = [];
     document.querySelectorAll('#baRolesGrid input[type="checkbox"]:checked').forEach(cb => {
@@ -3179,8 +3373,8 @@ function batchClearRoles() {
     });
 
     let count = 0;
-    selectedPlayerIds.forEach(pid => {
-        const player = state.players.find(p => p.id === pid);
+    selectedPlayerIndexes.forEach(playerIndex => {
+        const player = state.players[playerIndex];
         if (player) {
             if (selectedRoleIndices.length > 0) {
                 // Remove only selected roles
@@ -3190,6 +3384,7 @@ function batchClearRoles() {
                 player.activeSlots = [];
             }
             player.result = calculateScore(player.stats, player.activeSlots);
+            touchEntity(player);
             count++;
         }
     });
@@ -3250,9 +3445,10 @@ function saveProfile() {
     const existingIdx = state.profiles.findIndex(pr => pr.name.toLowerCase() === name.toLowerCase());
     if (existingIdx >= 0) {
         state.profiles[existingIdx].assignments = assignments;
+        touchEntity(state.profiles[existingIdx]);
         toast(`📋 Đã cập nhật đội hình "${name}"`);
     } else {
-        state.profiles.push({ name, assignments });
+        state.profiles.push({ name, assignments, _updatedAt: nowStamp(), _updatedBy: CLIENT_ID });
         toast(`💾 Đã lưu đội hình "${name}" (${Object.keys(assignments).length} vai trò)`);
     }
 
@@ -3268,13 +3464,14 @@ function loadProfile(idx) {
     let matched = 0, notFound = [];
 
     // Clear all current roles first
-    state.players.forEach(p => { p.activeSlots = []; });
+    state.players.forEach(p => { p.activeSlots = []; touchEntity(p); });
 
     // Apply profile assignments
     Object.entries(profile.assignments).forEach(([playerName, slots]) => {
         const player = state.players.find(p => p.name.toLowerCase() === playerName.toLowerCase());
         if (player) {
             player.activeSlots = [...slots];
+            touchEntity(player);
             matched++;
         } else {
             notFound.push(playerName);
@@ -3284,6 +3481,7 @@ function loadProfile(idx) {
     // Recalculate
     state.players.forEach(p => {
         p.result = calculateScore(p.stats, p.activeSlots);
+        touchEntity(p);
     });
 
     recalculateAll();
@@ -3303,6 +3501,7 @@ function loadProfile(idx) {
 
 function deleteProfile(idx) {
     const name = state.profiles[idx]?.name || '';
+    markDeleted('deletedProfileKeys', name);
     state.profiles.splice(idx, 1);
     saveState();
     renderProfiles();
@@ -3435,6 +3634,7 @@ function removeSlot(idx) {
         p.activeSlots = p.activeSlots
             .filter(i => i !== idx)
             .map(i => i > idx ? i - 1 : i);
+        touchEntity(p);
     });
     renderSlots();
     renderMultiplierChecks();
@@ -3663,6 +3863,7 @@ function doImport(mode) {
     }
 
     if (mode === 'replace') {
+        state.players.forEach(p => markDeleted('deletedPlayerIds', p.id));
         state.players = [];
     }
 
@@ -3696,6 +3897,7 @@ function doImport(mode) {
             if (activeSlots.length > 0) existing.activeSlots = activeSlots;
             if (monPhai) existing.monPhai = monPhai;
             existing.result = calculateScore(existing.stats, existing.activeSlots);
+            touchEntity(existing);
             updated++;
         } else if (!existing) {
             const result = calculateScore(stats, activeSlots);
@@ -3705,7 +3907,9 @@ function doImport(mode) {
                 monPhai,
                 stats,
                 activeSlots,
-                result
+                result,
+                _updatedAt: nowStamp(),
+                _updatedBy: CLIENT_ID
             });
             added++;
         }
@@ -3724,11 +3928,16 @@ function doImport(mode) {
 // ═══════════════════════════════════════════════
 
 function saveState() {
+    if (!applyingRemote) {
+        state._updatedAt = nowStamp();
+        state._updatedBy = CLIENT_ID;
+    }
     try {
         localStorage.setItem('bangChienStats', JSON.stringify(state));
     } catch (e) {
         console.warn('Could not save state:', e);
     }
+    saveStateToFirebase();
 }
 
 function loadState() {
@@ -3742,16 +3951,36 @@ function loadState() {
                 coefficients: { ...DEFAULT_COEFFICIENTS, ...parsed.coefficients },
                 thresholds: { ...DEFAULT_THRESHOLDS, ...parsed.thresholds }
             };
-            // Ensure slots exist
-            if (!state.slots || state.slots.length === 0) {
-                state.slots = JSON.parse(JSON.stringify(DEFAULT_SLOTS));
-            }
-            // Ensure seasons exist
-            if (!state.seasons) state.seasons = [];
+            ensureStateShape();
+            stampLegacyLocalState();
         }
     } catch (e) {
         console.warn('Could not load state:', e);
     }
+}
+
+function ensureStateShape() {
+    if (!Array.isArray(state.players)) state.players = [];
+    if (!state.coefficients) state.coefficients = { ...DEFAULT_COEFFICIENTS };
+    if (!state.thresholds) state.thresholds = { ...DEFAULT_THRESHOLDS };
+    if (!state.slots || state.slots.length === 0) state.slots = JSON.parse(JSON.stringify(DEFAULT_SLOTS));
+    if (!state.seasons) state.seasons = [];
+    if (!state.profiles) state.profiles = [];
+    if (!state.deletedPlayerIds) state.deletedPlayerIds = [];
+    if (!state.deletedProfileKeys) state.deletedProfileKeys = [];
+    if (!state.deletedSeasonKeys) state.deletedSeasonKeys = [];
+    const maxId = state.players.reduce((m, p) => Math.max(m, Number(p.id) || 0), 0);
+    if (!state.nextId || state.nextId <= maxId) state.nextId = maxId + 1;
+}
+
+function stampLegacyLocalState() {
+    if (state._updatedAt || (!state.players.length && !state.profiles.length && !state.seasons.length)) return;
+    const stamp = nowStamp();
+    state._updatedAt = stamp;
+    state._updatedBy = CLIENT_ID;
+    state.players.forEach(p => { if (!p._updatedAt) touchEntity(p, stamp); });
+    state.profiles.forEach(p => { if (!p._updatedAt) touchEntity(p, stamp); });
+    state.seasons.forEach(s => { if (!s._updatedAt) touchEntity(s, stamp); });
 }
 
 // ═══════════════════════════════════════════════
