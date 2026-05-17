@@ -3288,8 +3288,8 @@ function renderBatchAssign() {
     playerList.innerHTML = sorted.map(p => {
         const roles = (p.activeSlots || []).map(idx => state.slots[idx]?.name).filter(Boolean).join(', ');
         return `
-            <div class="ba-player-row" onclick="baTogglePlayer(this, ${p.id})">
-                <input type="checkbox" data-ba-player="${p.id}">
+            <div class="ba-player-row" onclick="baTogglePlayer(this)">
+                <input type="checkbox" data-ba-player="${escapeAttr(String(p.id))}" onclick="event.stopPropagation(); baSyncPlayerRow(this);">
                 <span class="ba-player-name">${escapeHtml(p.name)}</span>
                 <span class="ba-player-roles">${roles ? escapeHtml(roles) : ''}</span>
             </div>`;
@@ -3310,10 +3310,15 @@ function renderBatchAssign() {
     updateBaCount();
 }
 
-function baTogglePlayer(row, id) {
+function baTogglePlayer(row) {
     const cb = row.querySelector('input[type="checkbox"]');
     cb.checked = !cb.checked;
     row.classList.toggle('selected', cb.checked);
+    updateBaCount();
+}
+
+function baSyncPlayerRow(cb) {
+    cb.closest('.ba-player-row')?.classList.toggle('selected', cb.checked);
     updateBaCount();
 }
 
@@ -3350,7 +3355,7 @@ function filterBatchPlayers() {
 function batchAssignRoles() {
     const selectedPlayerIds = [];
     document.querySelectorAll('#baPlayerList input[type="checkbox"]:checked').forEach(cb => {
-        selectedPlayerIds.push(parseInt(cb.dataset.baPlayer));
+        selectedPlayerIds.push(cb.dataset.baPlayer);
     });
 
     const selectedRoleIndices = [];
@@ -3363,7 +3368,7 @@ function batchAssignRoles() {
 
     let count = 0;
     selectedPlayerIds.forEach(pid => {
-        const player = state.players.find(p => p.id === pid);
+        const player = state.players.find(p => String(p.id) === pid);
         if (player) {
             // Merge roles (add new, keep existing)
             const existing = new Set(player.activeSlots || []);
@@ -3387,7 +3392,7 @@ function batchAssignRoles() {
 function batchClearRoles() {
     const selectedPlayerIds = [];
     document.querySelectorAll('#baPlayerList input[type="checkbox"]:checked').forEach(cb => {
-        selectedPlayerIds.push(parseInt(cb.dataset.baPlayer));
+        selectedPlayerIds.push(cb.dataset.baPlayer);
     });
 
     if (selectedPlayerIds.length === 0) { toast('⚠️ Chưa chọn người chơi'); return; }
@@ -3399,7 +3404,7 @@ function batchClearRoles() {
 
     let count = 0;
     selectedPlayerIds.forEach(pid => {
-        const player = state.players.find(p => p.id === pid);
+        const player = state.players.find(p => String(p.id) === pid);
         if (player) {
             if (selectedRoleIndices.length > 0) {
                 // Remove only selected roles
@@ -4001,6 +4006,10 @@ function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+}
+
+function escapeAttr(str) {
+    return escapeHtml(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function toast(msg) {
